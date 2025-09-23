@@ -1,0 +1,6 @@
+@Code_Curry_HostAddress = http://localhost:5115
+
+GET {{Code_Curry_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
