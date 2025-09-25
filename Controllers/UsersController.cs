@@ -1,13 +1,11 @@
 ﻿using Code_Curry.Models;
 using Microsoft.AspNetCore.Mvc;
-using System;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.EntityFrameworkCore; // required for AnyAsync
+using Code_Curry.DTOs;
 
-using YourProject.DTOs;
-
-
-namespace YourProject.Controllers
+namespace Code_Curry.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -23,14 +21,16 @@ namespace YourProject.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] CreateUserDto dto)
         {
-            // check if email exists
-            if (_context.Users.Any(u => u.Email == dto.Email))
+            // async check if email exists
+            bool emailExists = await _context.Users.AnyAsync(u => u.Email == dto.Email);
+            if (emailExists)
             {
-                return BadRequest("Email already exists.");
+                return Conflict("Email already exists."); // 409 Conflict
             }
 
             // hash password
-            var hashedPassword = HashPassword(dto.Password);
+            var hashedPassword = HashPassword(dto.Password); //hashpassword is defined below,
+                                                             //we have implemented this function.
 
             // map DTO to EF entity
             var user = new User
@@ -40,11 +40,11 @@ namespace YourProject.Controllers
                 Phone = dto.Phone,
                 Address = dto.Address,
                 PasswordHash = hashedPassword,
-                Role = "Customer"  // default role
+                Role = dto.Role ?? "Customer" // take role from input, default to Customer
             };
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            await _context.Users.AddAsync(user);           // async add
+            await _context.SaveChangesAsync();             // async save
 
             // return minimal info, do not return password
             return Ok(new

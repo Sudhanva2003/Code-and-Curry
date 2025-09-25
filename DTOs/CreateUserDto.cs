@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace YourProject.DTOs
+namespace Code_Curry.DTOs
 {
     public class CreateUserDto
     {
@@ -13,11 +13,16 @@ namespace YourProject.DTOs
         [MaxLength(100)]
         public string Email { get; set; }
 
+        [Required]
         [MaxLength(15)]
         public string Phone { get; set; }
 
         [MaxLength(255)]
         public string Address { get; set; }
+
+        
+        [MaxLength(10)]
+        public string Role { get; set; }
 
         [Required]
         [MaxLength(255)]
