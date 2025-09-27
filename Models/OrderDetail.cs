@@ -7,7 +7,7 @@ public partial class OrderDetail
 {
     public int OrderDetailId { get; set; }
 
-    public int OrderId { get; set; }
+    public int OrderId { get; set; }//this will be duplicate across many rows
 
     public int FoodId { get; set; }
 
