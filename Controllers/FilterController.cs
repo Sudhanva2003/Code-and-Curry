@@ -23,7 +23,6 @@ namespace Code_Curry.Controllers
 
             query = query.ToLower();
 
-            // Search Restaurants
             var matchedRestaurants = await _context.Restaurants
                 .Where(r => r.Name.ToLower().Contains(query) || r.Address.ToLower().Contains(query))
                 .Select(r => new DTOs.SearchDto
@@ -36,7 +35,6 @@ namespace Code_Curry.Controllers
                 })
                 .ToListAsync();
 
-            // Search Foods
             var matchedFoods = await _context.Foods
                 .Where(f => f.Name.ToLower().Contains(query) || f.Description.ToLower().Contains(query) || f.Category.ToLower().Contains(query))
                 .Select(f => new DTOs.FoodSearchDto
