@@ -22,7 +22,7 @@ namespace Code_Curry.Controllers
             _context = context;
         }
 
-        [HttpPost("AddRestaurant")]
+        [HttpPost("RegisterRestaurant{id}")]
         public async Task<IActionResult> AddRestaurant([FromBody] RestaurantDto dto)
         {
             var restaurant = new Restaurant
@@ -39,8 +39,8 @@ namespace Code_Curry.Controllers
             await _context.SaveChangesAsync();
             return Ok(restaurant.RestId);
         }
-        [HttpPut("EditRestaurant")]
-        public async Task<IActionResult> EditRestaurant(int id, [FromBody] RestaurantUpdateDto dto)
+        [HttpPut("EditRestaurant{RestId}")]
+        public async Task<IActionResult> EditRestaurant(int id, [FromBody] Restaurant dto)
         {
             var restaurant = await _context.Restaurants.FindAsync(id);
             if (restaurant == null) return NotFound("Restaurant not found");
@@ -55,8 +55,29 @@ namespace Code_Curry.Controllers
             await _context.SaveChangesAsync();
             return Ok("Restaurant updated");
         }
+        [HttpGet("ViewRestaurant/{RestId}")]
+        public async Task<IActionResult> ViewRestaurant(int RestId)
+        {
+            var restaurant = await _context.Restaurants
+                .FirstOrDefaultAsync(r => r.RestId == RestId);
 
-        [HttpGet("Menu")]
+            if (restaurant == null) return NotFound("Restaurant not found");
+
+            var restaurantDetails = new RestaurantDto
+            {
+                Name = restaurant.Name,
+                Address = restaurant.Address,
+                Rating = restaurant.Rating,
+                Phone = restaurant.Phone,
+                Email = restaurant.Email,
+                IsOpen = restaurant.IsOpen
+            };
+
+            return Ok(restaurantDetails);
+        }
+
+
+        [HttpGet("Menu/{RestId}")]
         public async Task<IActionResult> ViewMenu(int id)
         {
             var restaurant = await _context.Restaurants
@@ -78,7 +99,7 @@ namespace Code_Curry.Controllers
             return Ok(menu);
         }
 
-        [HttpPut("OrderDetails")]
+        [HttpPut("Prepared/{orderId}")]
         public async Task<IActionResult> MarkOrderPrepared(int orderId)
         {
             var order = await _context.Orders.FindAsync(orderId);
