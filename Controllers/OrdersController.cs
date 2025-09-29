@@ -18,7 +18,7 @@ namespace Code_Curry.Controllers
             this._context = context;
             }
 
-        [HttpPost]
+        [HttpPost("placeOrder")]
         public async Task<IActionResult> PlaceOrder([FromBody] PlaceOrderDto dto)
         {
             if (dto == null || dto.OrderItems == null || !dto.OrderItems.Any())

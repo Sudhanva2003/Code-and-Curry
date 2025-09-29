@@ -56,7 +56,7 @@ namespace Code_Curry.Controllers
             });
         }
 
-        [HttpPut("{id}")]
+        [HttpPut("EditUserDetails/{userId}")]
         public async Task<IActionResult> EditUserDetails(int id,[FromBody] CreateUserDto newUser)
         {
             var oldUser = await _context.Users.FindAsync(id);
@@ -78,7 +78,7 @@ namespace Code_Curry.Controllers
 
         }
 
-        [HttpPost("{id}")]
+        [HttpGet("ViewUserOrders/{userId}")]
         public async Task<IActionResult> ViewOrders(int userId)
         {
             
