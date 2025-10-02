@@ -20,6 +20,9 @@ namespace Code_Curry.DTOs
         [MaxLength(100)]
         public string? Email { get; set; }
         [Required]
+
+        [MinLength(6)]
+        public string? Password { get; set; }
         public bool IsOpen { get; set; } = true;
     }
 }

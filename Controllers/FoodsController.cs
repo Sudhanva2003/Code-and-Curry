@@ -16,11 +16,9 @@ namespace Code_Curry.Controllers
             _context = context;
         }
 
-        // ----------------------------
-        // 2) Add food and price
-        // ----------------------------
-        [HttpPost]
-        public async Task<ActionResult<Food>> AddFood([FromBody] FoodCreateDto dto)
+       
+        [HttpPost("AddFood")]
+        public async Task<ActionResult<FoodResponseDto>> AddFood([FromBody] FoodCreateDto dto)
         {
             // Verify restaurant exists
             var rest = await _context.Restaurants.FindAsync(dto.RestId);
@@ -39,14 +37,29 @@ namespace Code_Curry.Controllers
 
             _context.Foods.Add(food);
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetFood), new { id = food.FoodId }, food);
+
+            // Map to DTO
+            var foodDto = new FoodResponseDto
+            {
+                FoodId = food.FoodId,
+                RestId = food.RestId,
+                Name = food.Name,
+                Description = food.Description,
+                Price = food.Price,
+                Category = food.Category,
+                IsAvailable = food.IsAvailable,
+                RestaurantName = rest.Name
+            };
+
+            return CreatedAtAction(nameof(GetFood), new { FoodId = food.FoodId }, foodDto);
         }
 
+
         // Helper to retrieve a single food (used by CreatedAtAction)
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Food>> GetFood(int id)
+        [HttpGet("GetFood/{FoodId}")]
+        public async Task<ActionResult<Food>> GetFood(int FoodId)
         {
-            var food = await _context.Foods.FindAsync(id);
+            var food = await _context.Foods.FindAsync(FoodId);
             if (food == null) return NotFound();
             return food;
         }
@@ -54,10 +67,10 @@ namespace Code_Curry.Controllers
         // ----------------------------
         // 3) Edit food and price
         // ----------------------------
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateFood(int id, [FromBody] FoodUpdateDto dto)
+        [HttpPut("UpdateFood/{FoodId}")]
+        public async Task<IActionResult> UpdateFood(int FoodId, [FromBody] FoodUpdateDto dto)
         {
-            var food = await _context.Foods.FindAsync(id);
+            var food = await _context.Foods.FindAsync(FoodId);
             if (food == null) return NotFound();
 
             // You must send all fields here
@@ -74,10 +87,10 @@ namespace Code_Curry.Controllers
         // ----------------------------
         // 4) Delete food method
         // ----------------------------
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteFood(int id)
+        [HttpDelete("DeleteFood/{FoodId}")]
+        public async Task<IActionResult> DeleteFood(int FoodId)
         {
-            var food = await _context.Foods.FindAsync(id);
+            var food = await _context.Foods.FindAsync(FoodId);
             if (food == null) return NotFound();
 
             _context.Foods.Remove(food);
@@ -88,10 +101,10 @@ namespace Code_Curry.Controllers
         // ----------------------------
         // 5) Make food unavailable
         // ----------------------------
-        [HttpPatch("{id}/availability")]
-        public async Task<IActionResult> SetAvailability(int id, [FromBody] FoodAvailabilityDto dto)
+        [HttpPatch("ChangeAvailability/{FoodId}")]
+        public async Task<IActionResult> SetAvailability(int FoodId, [FromBody] FoodAvailabilityDto dto)
         {
-            var food = await _context.Foods.FindAsync(id);
+            var food = await _context.Foods.FindAsync(FoodId);
             if (food == null) return NotFound();
 
             food.IsAvailable = dto.IsAvailable;

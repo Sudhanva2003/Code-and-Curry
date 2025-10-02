@@ -17,6 +17,8 @@ public partial class Restaurant
 
     public string? Email { get; set; }
 
+    public string PasswordHash { get; set; } = null!;
+
     public bool IsOpen { get; set; }
 
     public virtual ICollection<Food> Foods { get; set; } = new List<Food>();

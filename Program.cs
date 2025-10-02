@@ -11,12 +11,22 @@ namespace Code_Curry
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowSpecificOrigin",
+                    policy =>
+                    {
+                        policy.WithOrigins("http://localhost:4200") // frontend origin
+                              .AllowAnyMethod()
+                              .AllowAnyHeader();
+                    });
+            });
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddDbContext<CodeCurryContext>(o => o.UseSqlServer(builder.Configuration.GetConnectionString("mycon")));
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
+
 
             var app = builder.Build();
 
@@ -31,7 +41,7 @@ namespace Code_Curry
 
             app.UseAuthorization();
 
-
+            app.UseCors("AllowSpecificOrigin");
             app.MapControllers();
 
             app.Run();

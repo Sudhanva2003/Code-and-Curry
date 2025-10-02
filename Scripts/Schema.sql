@@ -10,9 +10,10 @@ CREATE TABLE Restaurant (
     RestId INT IDENTITY(1,1) PRIMARY KEY,
     Name NVARCHAR(100) NOT NULL, --will take space seperated input
     Address NVARCHAR(255) NOT NULL,
-    Rating DECIMAL(2,1),
+    Rating DECIMAL(2,1) NOT NULL,
     Phone VARCHAR(15),
-    Email VARCHAR(100),
+    Email VARCHAR(100) NOT NULL,
+    Password VARCHAR(100) NOT NULL,
     IsOpen BIT NOT NULL DEFAULT 1    -- 1 = Open, 0 = Closed
 );
 

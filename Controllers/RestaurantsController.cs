@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ﻿using Code_Curry.DTOs;
 using Code_Curry.Models;
 using Microsoft.AspNetCore.Http;
@@ -7,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Code_Curry.Controllers
@@ -19,58 +20,69 @@ namespace Code_Curry.Controllers
         private readonly CodeCurryContext _context;
 
         public RestaurantController(CodeCurryContext context)
-=======
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Code_Curry.Models;
-
-namespace Code_Curry.Controllers
-{
-    [Route("api/[controller]")]
-    [ApiController]
-    public class RestaurantsController : ControllerBase
-    {
-        private readonly CodeCurryContext _context;
-
-        public RestaurantsController(CodeCurryContext context)
->>>>>>> main
         {
             _context = context;
         }
 
-<<<<<<< HEAD
-        [HttpPost("RegisterRestaurant{id}")]
-        public async Task<IActionResult> AddRestaurant([FromBody] RestaurantDto dto)
+        [HttpPost("RegisterRestaurant")]
+        public async Task<IActionResult> RegisterRestaurant([FromBody] RestaurantDto dto)
         {
-            var restaurant = new Restaurant
+            bool emailExists = await _context.Restaurants.AnyAsync(u => u.Email == dto.Email);
+            if (emailExists)
+            {
+                return Conflict("Email already exists."); // 409 Conflict
+            }
+
+            // hash password
+            var hashedPassword = HashPassword(dto.Password); //hashpassword is defined below,
+                                                             //we have implemented this function.
+
+            // map DTO to EF entity
+            var Restaurant = new Restaurant
             {
                 Name = dto.Name,
-                Address = dto.Address,
-                Rating = dto.Rating,
-                Phone = dto.Phone,
                 Email = dto.Email,
+                Phone = dto.Phone,
+                Address = dto.Address,
+                PasswordHash = hashedPassword,
+                Rating = dto.Rating,
                 IsOpen = dto.IsOpen
+                //Role = dto.Role ?? "Customer" // take role from input, default to Customer
             };
 
-            _context.Restaurants.Add(restaurant);
-            await _context.SaveChangesAsync();
-            return Ok(restaurant.RestId);
+            await _context.Restaurants.AddAsync(Restaurant);           // async add
+            await _context.SaveChangesAsync();             // async save
+
+            // return minimal info, do not return password
+            return Ok(new
+            {
+                Restaurant.RestId,
+                Restaurant.Name,
+                Restaurant.Email,
+                Restaurant.Address,
+                Restaurant.Rating,
+                Restaurant.IsOpen
+
+            });
         }
-        [HttpPut("EditRestaurant{RestId}")]
-        public async Task<IActionResult> EditRestaurant(int id, [FromBody] Restaurant dto)
+        [HttpPut("EditRestaurant/{RestId}")]
+        public async Task<IActionResult> EditRestaurant(int RestId, [FromBody] RestaurantEditDto dto)
         {
-            var restaurant = await _context.Restaurants.FindAsync(id);
+            var restaurant = await _context.Restaurants.FindAsync(RestId);
             if (restaurant == null) return NotFound("Restaurant not found");
 
-            restaurant.Name = dto.Name;
-            restaurant.Address = dto.Address;
-            restaurant.Rating = dto.Rating;
-            restaurant.Phone = dto.Phone;
-            restaurant.Email = dto.Email;
-            restaurant.IsOpen = dto.IsOpen;
+            var restaurantDetails = new RestaurantEditDto
+            {
+                Name = restaurant.Name,
+                Address = restaurant.Address,
+                Rating = restaurant.Rating,
+                Phone = restaurant.Phone,
+                Email = restaurant.Email,
+                IsOpen = restaurant.IsOpen
 
-            await _context.SaveChangesAsync();
-            return Ok("Restaurant updated");
+            };
+
+            return Ok(restaurantDetails);
         }
         [HttpGet("ViewRestaurant/{RestId}")]
         public async Task<IActionResult> ViewRestaurant(int RestId)
@@ -80,14 +92,16 @@ namespace Code_Curry.Controllers
 
             if (restaurant == null) return NotFound("Restaurant not found");
 
-            var restaurantDetails = new RestaurantDto
+            var restaurantDetails = new RestaurantEditDto
             {
                 Name = restaurant.Name,
                 Address = restaurant.Address,
                 Rating = restaurant.Rating,
                 Phone = restaurant.Phone,
                 Email = restaurant.Email,
+                
                 IsOpen = restaurant.IsOpen
+
             };
 
             return Ok(restaurantDetails);
@@ -95,11 +109,11 @@ namespace Code_Curry.Controllers
 
 
         [HttpGet("Menu/{RestId}")]
-        public async Task<IActionResult> ViewMenu(int id)
+        public async Task<IActionResult> ViewMenu(int RestId)
         {
             var restaurant = await _context.Restaurants
                 .Include(r => r.Foods)
-                .FirstOrDefaultAsync(r => r.RestId == id);
+                .FirstOrDefaultAsync(r => r.RestId == RestId);
 
             if (restaurant == null) return NotFound("Restaurant not found");
 
@@ -142,69 +156,13 @@ namespace Code_Curry.Controllers
                 }).ToListAsync();
 
             return Ok(restaurants);
-=======
-        // GET: api/Restaurants/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Restaurant>> GetRestaurant(int id)
-        {
-            var restaurant = await _context.Restaurants.FindAsync(id);
-            if (restaurant == null)
-                return NotFound();
-
-            return restaurant;
         }
 
-        // PUT: api/Restaurants/5
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateRestaurant(int id, Restaurant restaurant)
+        private string HashPassword(string password)
         {
-            if (id != restaurant.RestId)
-                return BadRequest();
-
-            _context.Entry(restaurant).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.Restaurants.Any(e => e.RestId == id))
-                    return NotFound();
-                else
-                    throw;
-            }
-
-            return NoContent();
-        }
-
-        // DELETE: api/Restaurants/5
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteRestaurant(int id)
-        {
-            var restaurant = await _context.Restaurants.FindAsync(id);
-            if (restaurant == null)
-                return NotFound();
-
-            _context.Restaurants.Remove(restaurant);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
-
-        // PATCH: api/Restaurants/5/status?isOpen=true
-        [HttpPatch("{id}/status")]
-        public async Task<IActionResult> UpdateOpenStatus(int id, [FromQuery] bool isOpen)
-        {
-            var restaurant = await _context.Restaurants.FindAsync(id);
-            if (restaurant == null)
-                return NotFound();
-
-            restaurant.IsOpen = isOpen;
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = $"Restaurant {(isOpen ? "opened" : "closed")} successfully." });
->>>>>>> main
+            using var sha256 = SHA256.Create();
+            var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+            return Convert.ToBase64String(bytes);
         }
     }
 }

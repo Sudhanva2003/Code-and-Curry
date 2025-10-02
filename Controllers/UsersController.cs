@@ -56,10 +56,30 @@ namespace Code_Curry.Controllers
             });
         }
 
-        [HttpPut("EditUserDetails/{userId}")]
-        public async Task<IActionResult> EditUserDetails(int id,[FromBody] CreateUserDto newUser)
+        [HttpGet("ViewUser/{UserId}")]
+
+        public async Task<IActionResult> ViewUser(int UserId)
         {
-            var oldUser = await _context.Users.FindAsync(id);
+            var user=await _context.Users.FindAsync(UserId);
+            if (user == null)
+            {
+                return NotFound();
+            }
+            var dto = new EditUserDto
+            {
+                FullName = user.FullName,
+                Email = user.Email,
+                Phone = user.Phone,
+                Address = user.Address
+            };
+
+            return Ok(dto);
+        }
+
+        [HttpPut("EditUserDetails/{UserId}")]
+        public async Task<IActionResult> EditUserDetails(int UserId,[FromBody] EditUserDto newUser)
+        {
+            var oldUser = await _context.Users.FindAsync(UserId);
             if (oldUser==null)
             {
                 return BadRequest("User not found");
@@ -72,19 +92,30 @@ namespace Code_Curry.Controllers
             oldUser.Email = newUser.Email;
             oldUser.Phone = newUser.Phone;
             oldUser.Address = newUser.Address;
+            oldUser.Role = newUser.Role;
 
             await _context.SaveChangesAsync();
-            return Ok(newUser);
+
+            var dto = new EditUserDto
+            {
+                FullName = oldUser.FullName,
+                Email = oldUser.Email,
+                Phone = oldUser.Phone,
+                Address = oldUser.Address,
+                Role=oldUser.Role
+            };
+
+            return Ok(dto);
 
         }
 
-        [HttpGet("ViewUserOrders/{userId}")]
-        public async Task<IActionResult> ViewOrders(int userId)
+        [HttpGet("ViewUserOrders/{UserId}")]
+        public async Task<IActionResult> ViewOrders(int UserId)
         {
             
                 // Fetch all orders for this user including details and food
                 var orders = await _context.Orders
-                    .Where(o => o.UserId == userId)
+                    .Where(o => o.UserId == UserId)
                     .Include(o => o.OrderDetails)
                         .ThenInclude(od => od.Food)
                     .ToListAsync();
@@ -141,6 +172,62 @@ namespace Code_Curry.Controllers
 
 
         }
+
+        [HttpGet("ViewCart/{UserId}")]
+        public async Task<IActionResult> ViewCart(int UserId)
+        {
+            var pendingOrders = await _context.Orders
+                .Where(o => o.UserId == UserId && o.Status == "Pending")
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.Food)
+                .ToListAsync();
+
+            if (!pendingOrders.Any())
+                return NotFound("No pending orders (cart is empty).");
+
+            var result = pendingOrders.Select(o => new
+            {
+                orderId = o.OrderId,
+                restId = o.RestId,
+                orderDate = o.OrderDate,
+                totalAmount = o.TotalAmount,
+                status = o.Status,
+                items = o.OrderDetails.Select(d => new
+                {
+                    foodId = d.FoodId,
+                    foodName = d.Food.Name,
+                    quantity = d.Quantity,
+                    price = d.Price
+                })
+            });
+
+            return Ok(result);
+        }
+
+        [HttpPost("Checkout/{orderId}")]
+        public async Task<IActionResult> Checkout(int orderId)
+        {
+            var order = await _context.Orders.FindAsync(orderId);
+
+            if (order == null)
+                return NotFound("Order not found.");
+
+            if (order.Status != "Pending")
+                return BadRequest("Only pending orders can be checked out.");
+
+            order.Status = "Paid";
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Order checked out successfully.",
+                orderId = order.OrderId,
+                newStatus = order.Status,
+                totalAmount = order.TotalAmount
+            });
+        }
+
+
 
         private string HashPassword(string password)
         {
