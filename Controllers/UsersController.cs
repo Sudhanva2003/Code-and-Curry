@@ -4,11 +4,14 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore; // required for AnyAsync
 using Code_Curry.DTOs;
+using Microsoft.AspNetCore.Cors;
 
 namespace Code_Curry.Controllers
 {
-    [ApiController]
+   
     [Route("api/[controller]")]
+    [ApiController]
+    
     public class UsersController : ControllerBase
     {
         private readonly CodeCurryContext _context;

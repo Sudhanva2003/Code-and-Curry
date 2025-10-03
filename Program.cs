@@ -1,4 +1,3 @@
-
 using Code_Curry.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,17 +9,23 @@ namespace Code_Curry
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-
             builder.Services.AddControllers();
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-            builder.Services.AddDbContext<CodeCurryContext>(o => o.UseSqlServer(builder.Configuration.GetConnectionString("mycon")));
+            builder.Services.AddDbContext<CodeCurryContext>(o =>
+                o.UseSqlServer(builder.Configuration.GetConnectionString("mycon")));
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            // ? Add CORS policy
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowFrontend",
+                    policy => policy.WithOrigins("http://localhost:4200")
+                                    .AllowAnyHeader()
+                                    .AllowAnyMethod());
+            });
+
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
@@ -31,6 +36,8 @@ namespace Code_Curry
 
             app.UseAuthorization();
 
+            // ? Enable CORS
+            app.UseCors("AllowFrontend");
 
             app.MapControllers();
 
