@@ -28,7 +28,8 @@ namespace Code_Curry.Controllers
         public async Task<IActionResult> RegisterRestaurant([FromBody] RestaurantDto dto)
         {
             bool emailExists = await _context.Restaurants.AnyAsync(u => u.Email == dto.Email);
-            if (emailExists)
+            bool userEmailExists= await _context.Users.AnyAsync(u => u.Email == dto.Email);
+            if (emailExists||userEmailExists)
             {
                 return Conflict("Email already exists."); // 409 Conflict
             }
@@ -75,9 +76,7 @@ namespace Code_Curry.Controllers
             {
                 Name = restaurant.Name,
                 Address = restaurant.Address,
-                Rating = restaurant.Rating,
                 Phone = restaurant.Phone,
-                Email = restaurant.Email,
                 IsOpen = restaurant.IsOpen
 
             };
@@ -92,14 +91,13 @@ namespace Code_Curry.Controllers
 
             if (restaurant == null) return NotFound("Restaurant not found");
 
-            var restaurantDetails = new RestaurantEditDto
+            var restaurantDetails = new RestaurantProfileDto
             {
                 Name = restaurant.Name,
                 Address = restaurant.Address,
-                Rating = restaurant.Rating,
+                Rating =restaurant.Rating,
                 Phone = restaurant.Phone,
                 Email = restaurant.Email,
-                
                 IsOpen = restaurant.IsOpen
 
             };

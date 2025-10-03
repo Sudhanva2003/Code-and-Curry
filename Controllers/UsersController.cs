@@ -23,7 +23,8 @@ namespace Code_Curry.Controllers
         {
             // async check if email exists
             bool emailExists = await _context.Users.AnyAsync(u => u.Email == dto.Email);
-            if (emailExists)
+            bool RestaurantEmailExists = await _context.Restaurants.AnyAsync(u => u.Email == dto.Email);
+            if (emailExists||RestaurantEmailExists)
             {
                 return Conflict("Email already exists."); // 409 Conflict
             }
@@ -56,6 +57,67 @@ namespace Code_Curry.Controllers
             });
         }
 
+        [HttpPost("login")]
+       
+        public async Task<IActionResult> Login([FromBody] LoginDto dto)
+        {
+            if (dto == null || string.IsNullOrEmpty(dto.Email) || string.IsNullOrEmpty(dto.Password))
+            {
+                return BadRequest("Email and password are required.");
+            }
+
+            // Try finding user or restaurant
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+            var restaurant = await _context.Restaurants.FirstOrDefaultAsync(r => r.Email == dto.Email);
+
+            if (user == null && restaurant == null)
+            {
+                return Unauthorized("Email not found.");
+            }
+
+            // If it's a user
+            if (user != null)
+            {
+                var hashedPassword = HashPassword(dto.Password);
+                if (user.PasswordHash != hashedPassword)
+                {
+                    return Unauthorized("Invalid password.");
+                }
+
+                var response = new LoginResponseDto
+                {
+                    UserId = user.UserId,
+                    Role = user.Role,
+                    Name = user.FullName
+                };
+
+                return Ok(response);
+            }
+
+            // If it's a restaurant
+            if (restaurant != null)
+            {
+                var hashedPassword = HashPassword(dto.Password);
+                if (restaurant.PasswordHash != hashedPassword)
+                {
+                    return Unauthorized("Invalid password.");
+                }
+
+                var response = new LoginResponseDto
+                {
+                    UserId = restaurant.RestId,
+                    Role = "restaurant",
+                    Name = restaurant.Name
+                };
+
+                return Ok(response);
+            }
+
+            return Unauthorized("Login failed.");
+        }
+
+
+
         [HttpGet("ViewUser/{UserId}")]
 
         public async Task<IActionResult> ViewUser(int UserId)
@@ -65,12 +127,13 @@ namespace Code_Curry.Controllers
             {
                 return NotFound();
             }
-            var dto = new EditUserDto
+            var dto = new UserSummaryDto
             {
                 FullName = user.FullName,
                 Email = user.Email,
                 Phone = user.Phone,
-                Address = user.Address
+                Address = user.Address,
+                Role=user.Role
             };
 
             return Ok(dto);
@@ -89,20 +152,17 @@ namespace Code_Curry.Controllers
                 return BadRequest("Updated User Details not given");
             }
             oldUser.FullName = newUser.FullName;
-            oldUser.Email = newUser.Email;
             oldUser.Phone = newUser.Phone;
             oldUser.Address = newUser.Address;
-            oldUser.Role = newUser.Role;
+ 
 
             await _context.SaveChangesAsync();
 
             var dto = new EditUserDto
             {
                 FullName = oldUser.FullName,
-                Email = oldUser.Email,
                 Phone = oldUser.Phone,
                 Address = oldUser.Address,
-                Role=oldUser.Role
             };
 
             return Ok(dto);
