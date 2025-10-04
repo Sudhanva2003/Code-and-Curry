@@ -48,7 +48,7 @@ namespace Code_Curry.Controllers
                     UserId = dto.UserId,
                     RestId = group.Key,
                     OrderDate = DateTime.UtcNow,
-                    Status = "Pending",
+                    Status = "Paid",
                 };
 
                 var orderDetails = new List<OrderDetail>();

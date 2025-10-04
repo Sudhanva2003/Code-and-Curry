@@ -156,6 +156,63 @@ namespace Code_Curry.Controllers
             return Ok(restaurants);
         }
 
+
+        
+
+        // 1) View Open Orders
+        [HttpGet("ViewRestaurantOpenOrders/{RestId}")]
+        public async Task<IActionResult> ViewRestaurantOpenOrders(int RestId)
+        {
+            var orders = await _context.Orders
+                .Where(o => o.RestId == RestId
+                            && o.Status == "Paid")
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.Food)
+                .OrderByDescending(o => o.OrderDate)
+                .Select(o => new
+                {
+                    o.OrderId,
+                    o.OrderDate,
+                    o.Status,
+                    o.TotalAmount,
+                    Items = o.OrderDetails.Select(od => new
+                    {
+                        od.Food.Name,
+                        od.Quantity
+                    }).ToList()
+                })
+                .ToListAsync();
+
+            return Ok(orders);
+        }
+
+        // 2) View Past Orders
+        [HttpGet("ViewRestaurantPastOrders/{RestId}")]
+        public async Task<IActionResult> ViewRestaurantPastOrders(int RestId)
+        {
+            var orders = await _context.Orders
+                .Where(o => o.RestId == RestId && o.Status == "Prepared")
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.Food)
+                .OrderByDescending(o => o.OrderDate)
+                .Select(o => new
+                {
+                    o.OrderId,
+                    o.OrderDate,
+                    o.Status,
+                    o.TotalAmount,
+                    Items = o.OrderDetails.Select(od => new
+                    {
+                        od.Food.Name,
+                        od.Quantity
+                    }).ToList()
+                })
+                .ToListAsync();
+
+            return Ok(orders);
+        }
+
+
         private string HashPassword(string password)
         {
             using var sha256 = SHA256.Create();

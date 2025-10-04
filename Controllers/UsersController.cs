@@ -41,7 +41,7 @@ namespace Code_Curry.Controllers
                 Phone = dto.Phone,
                 Address = dto.Address,
                 PasswordHash = hashedPassword,
-                Role = dto.Role ?? "Customer" // take role from input, default to Customer
+                Role = dto.Role ?? "user" // take role from input, default to Customer
             };
 
             await _context.Users.AddAsync(user);           // async add
