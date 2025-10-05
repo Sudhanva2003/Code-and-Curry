@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore; // required for AnyAsync
 using Code_Curry.DTOs;
+using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages.Manage;
 
 namespace Code_Curry.Controllers
 {
@@ -86,6 +87,7 @@ namespace Code_Curry.Controllers
 
                 var response = new LoginResponseDto
                 {
+                    Email=dto.Email,
                     UserId = user.UserId,
                     Role = user.Role,
                     Name = user.FullName
@@ -105,6 +107,7 @@ namespace Code_Curry.Controllers
 
                 var response = new LoginResponseDto
                 {
+                    Email=dto.Email,
                     UserId = restaurant.RestId,
                     Role = "restaurant",
                     Name = restaurant.Name
@@ -172,66 +175,65 @@ namespace Code_Curry.Controllers
         [HttpGet("ViewUserOrders/{UserId}")]
         public async Task<IActionResult> ViewOrders(int UserId)
         {
-            
-                // Fetch all orders for this user including details and food
-                var orders = await _context.Orders
-                    .Where(o => o.UserId == UserId)
-                    .Include(o => o.OrderDetails)
-                        .ThenInclude(od => od.Food)
-                    .ToListAsync();
+            // Fetch all orders for this user including details and food
+            var orders = await _context.Orders
+                .Where(o => o.UserId == UserId)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.Food)
+                .ToListAsync();
 
-                if (!orders.Any())
-                    return NotFound("No orders found for this user.");
+            if (!orders.Any())
+                return NotFound("No orders found for this user.");
 
-                // Open Orders (status = Paid)
-                var openOrders = orders
-                    .Where(o => o.Status == "Paid")
-                    .Select(o => new
-                    {
-                        orderId = o.OrderId,
-                        restId = o.RestId,
-                        orderDate = o.OrderDate,
-                        totalAmount = o.TotalAmount,
-                        status = o.Status,
-                        items = o.OrderDetails.Select(d => new
-                        {
-                            foodId = d.FoodId,
-                            foodName = d.Food.Name,
-                            quantity = d.Quantity,
-                            price = d.Price
-                        })
-                    }).ToList();
-
-                // Past Orders (status = Delivered)
-                var pastOrders = orders
-                    .Where(o => o.Status == "Delivered")
-                    .Select(o => new
-                    {
-                        orderId = o.OrderId,
-                        restId = o.RestId,
-                        orderDate = o.OrderDate,
-                        totalAmount = o.TotalAmount,
-                        status = o.Status,
-                        items = o.OrderDetails.Select(d => new
-                        {
-                            foodId = d.FoodId,
-                            foodName = d.Food.Name,
-                            quantity = d.Quantity,
-                            price = d.Price
-                        })
-                    }).ToList();
-
-                var result = new
+            // Open Orders (status = Paid)
+            var openOrders = orders
+                .Where(o => o.Status == "Paid")
+                .OrderByDescending(o => o.OrderDate)
+                .Select(o => new
                 {
-                    openOrders,
-                    pastOrders
-                };
+                    orderId = o.OrderId,
+                    restId = o.RestId,
+                    orderDate = o.OrderDate,
+                    totalAmount = o.TotalAmount,
+                    status = o.Status,
+                    items = o.OrderDetails.Select(d => new
+                    {
+                        foodId = d.FoodId,
+                        foodName = d.Food.Name,
+                        quantity = d.Quantity,
+                        price = d.Price
+                    })
+                }).ToList();
 
-                return Ok(result);
-            
+            // Past Orders (status = Prepared)
+            var pastOrders = orders
+                .Where(o => o.Status == "Prepared")
+                .OrderByDescending(o => o.OrderDate)
+                .Select(o => new
+                {
+                    orderId = o.OrderId,
+                    restId = o.RestId,
+                    orderDate = o.OrderDate,
+                    totalAmount = o.TotalAmount,
+                    status = o.Status,
+                    items = o.OrderDetails.Select(d => new
+                    {
+                        foodId = d.FoodId,
+                        foodName = d.Food.Name,
+                        quantity = d.Quantity,
+                        price = d.Price
+                    })
+                }).ToList();
 
+            var result = new
+            {
+                openOrders,
+                pastOrders
+            };
 
+            return Ok(result);
         }
+
 
         [HttpGet("ViewCart/{UserId}")]
         public async Task<IActionResult> ViewCart(int UserId)

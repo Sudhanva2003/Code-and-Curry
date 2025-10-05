@@ -2,21 +2,23 @@
 using Code_Curry.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Code_Curry.Controllers
 {
-    
-        [ApiController]
-        [Route("api/[controller]")]
+    [ApiController]
+    [Route("api/[controller]")]
+    public class OrdersController : ControllerBase
+    {
+        private readonly CodeCurryContext _context;
 
-        public class OrdersController : ControllerBase
+        public OrdersController(CodeCurryContext context)
         {
-            private readonly CodeCurryContext _context;
-            
-            public OrdersController(CodeCurryContext context)
-            {
-            this._context = context;
-            }
+            _context = context;
+        }
 
         [HttpPost("placeOrder")]
         public async Task<IActionResult> PlaceOrder([FromBody] PlaceOrderDto dto)
@@ -38,8 +40,7 @@ namespace Code_Curry.Controllers
                 .Join(foods, i => i.FoodId, f => f.FoodId, (i, f) => new { Item = i, Food = f })
                 .GroupBy(x => x.Food.RestId);
 
-            var generatedBills = new List<BillDto>();
-            var billService = new Bill(); // instance of your Bill class
+            var generatedBills = new List<object>(); // anonymous object for OrderId on top
 
             foreach (var group in itemsByRest)
             {
@@ -53,45 +54,44 @@ namespace Code_Curry.Controllers
 
                 var orderDetails = new List<OrderDetail>();
 
-                // Create OrderDetail objects (Price left 0, bill will calculate)
                 foreach (var x in group)
                 {
                     var detail = new OrderDetail
                     {
                         FoodId = x.Food.FoodId,
                         Quantity = x.Item.Quantity,
-                        Price = 0 // Price will be calculated in GenerateBill
+                        Price = 0 // will be calculated in Bill
                     };
 
                     orderDetails.Add(detail);
                     order.OrderDetails.Add(detail);
                 }
 
-                // Call GenerateBill to get final amount including taxes, delivery, handling
+                // Generate the bill totals
                 var bill = Bill.GenerateBill(orderDetails, foods.Where(f => f.RestId == group.Key).ToList());
 
-                // Set the TotalAmount in Order to final bill amount
+                // Set total amount in order
                 order.TotalAmount = bill.FinalAmount;
 
-                // Save order to context
+                // Add order to context
                 _context.Orders.Add(order);
+                await _context.SaveChangesAsync(); // OrderId populated here
 
-                // Add the generated bill to response
-                generatedBills.Add(bill);
+                // Add OrderId on top of bill response
+                generatedBills.Add(new
+                {
+                    orderId = order.OrderId,
+                    items = bill.Items,
+                    subtotal = bill.Subtotal,
+                    sgst = bill.SGST,
+                    cgst = bill.CGST,
+                    handlingCharges = bill.HandlingCharges,
+                    deliveryFees = bill.DeliveryFees,
+                    finalAmount = bill.FinalAmount
+                });
             }
 
-            await _context.SaveChangesAsync();
-
-            // Return the full generated bills for all restaurants
             return Ok(generatedBills);
         }
-
-
-
-
-
-
-
     }
-
 }

@@ -8,6 +8,7 @@
 
     public class LoginResponseDto
     {
+        public string Email { get; set; } = null!;
         public int UserId { get; set; }
         public string Role { get; set; } = null!;
 
