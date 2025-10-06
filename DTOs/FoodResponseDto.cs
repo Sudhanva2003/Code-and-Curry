@@ -12,6 +12,8 @@
 
         // Include just the restaurant name, not all its foods
         public string RestaurantName { get; set; } = null!;
+
+        public string? FoodImageUrl { get; set; }
     }
 
 }

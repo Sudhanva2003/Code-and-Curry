@@ -11,4 +11,6 @@ public class RestaurantSummaryDto
     public decimal? Rating { get; set; }
     [Required]
     public bool IsOpen { get; set; }
+
+    public string? RestImageUrl { get; set; }
 }

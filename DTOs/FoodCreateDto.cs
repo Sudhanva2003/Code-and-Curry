@@ -21,4 +21,6 @@ public class FoodCreateDto
     public string Category { get; set; }
 
     public bool IsAvailable { get; set; } = true;
+
+    public string? FoodImageUrl { get; set; }
 }

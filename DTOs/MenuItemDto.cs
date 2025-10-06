@@ -20,7 +20,9 @@ namespace Code_Curry.DTOs
         public decimal Price { get; set; }
         [Required]
             public bool IsAvailable { get; set; }
-        
+
+        public string? FoodImageUrl { get; set; }
+
 
     }
 }

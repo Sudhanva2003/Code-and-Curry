@@ -2,6 +2,8 @@
 using Microsoft.EntityFrameworkCore;
 using Code_Curry.Models;
 using Code_Curry.Dtos;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Code_Curry.Controllers
 {
@@ -20,7 +22,6 @@ namespace Code_Curry.Controllers
         [HttpPost("AddFood")]
         public async Task<ActionResult<FoodResponseDto>> AddFood([FromBody] FoodCreateDto dto)
         {
-            // Verify restaurant exists
             var rest = await _context.Restaurants.FindAsync(dto.RestId);
             if (rest == null)
                 return BadRequest($"Restaurant with id {dto.RestId} not found.");
@@ -32,13 +33,15 @@ namespace Code_Curry.Controllers
                 Description = dto.Description,
                 Price = dto.Price,
                 Category = dto.Category,
-                IsAvailable = dto.IsAvailable
+                IsAvailable = dto.IsAvailable,
+                FoodImageUrl = string.IsNullOrWhiteSpace(dto.FoodImageUrl)
+                    ? "https://static.vecteezy.com/system/resources/previews/004/204/922/non_2x/food-logo-template-design-icon-illustration-vector.jpg"
+                    : dto.FoodImageUrl
             };
 
             _context.Foods.Add(food);
             await _context.SaveChangesAsync();
 
-            // Map to DTO
             var foodDto = new FoodResponseDto
             {
                 FoodId = food.FoodId,
@@ -48,67 +51,75 @@ namespace Code_Curry.Controllers
                 Price = food.Price,
                 Category = food.Category,
                 IsAvailable = food.IsAvailable,
+                FoodImageUrl = food.FoodImageUrl,
                 RestaurantName = rest.Name
             };
 
             return CreatedAtAction(nameof(GetFood), new { FoodId = food.FoodId }, foodDto);
         }
 
-
-        // Helper to retrieve a single food (used by CreatedAtAction)
+      
         [HttpGet("GetFood/{FoodId}")]
-        public async Task<ActionResult<Food>> GetFood(int FoodId)
+        public async Task<ActionResult<FoodResponseDto>> GetFood(int FoodId)
         {
-            var food = await _context.Foods.FindAsync(FoodId);
+            var food = await _context.Foods
+                .Include(f => f.Rest)
+                .FirstOrDefaultAsync(f => f.FoodId == FoodId);
+
             if (food == null) return NotFound();
-            return food;
+
+            return new FoodResponseDto
+            {
+                FoodId = food.FoodId,
+                RestId = food.RestId,
+                Name = food.Name,
+                Description = food.Description,
+                Price = food.Price,
+                Category = food.Category,
+                IsAvailable = food.IsAvailable,
+                FoodImageUrl = food.FoodImageUrl,
+                RestaurantName = food.Rest.Name
+            };
         }
 
-        // ----------------------------
-        // 3) Edit food and price
-        // ----------------------------
+      
         [HttpPut("UpdateFood/{FoodId}")]
         public async Task<IActionResult> UpdateFood(int FoodId, [FromBody] FoodUpdateDto dto)
         {
             var food = await _context.Foods.FindAsync(FoodId);
             if (food == null) return NotFound();
 
-            // You must send all fields here
             food.Name = dto.Name;
             food.Description = dto.Description;
             food.Price = dto.Price;
             food.Category = dto.Category;
             food.IsAvailable = dto.IsAvailable;
 
+            // Optional update for image URL
+            if (!string.IsNullOrWhiteSpace(dto.FoodImageUrl))
+                food.FoodImageUrl = dto.FoodImageUrl;
+
             await _context.SaveChangesAsync();
             return NoContent();
         }
 
-        // ----------------------------
-        // 4) Delete food method
-        // ----------------------------
+      
         [HttpDelete("DeleteFood/{id}")]
         public async Task<IActionResult> DeleteFood(int id)
         {
             var food = await _context.Foods.FindAsync(id);
-            if (food == null)
-                return NotFound();
+            if (food == null) return NotFound();
 
-            // Manually delete order details referencing this food
             var orderDetails = _context.OrderDetails.Where(od => od.FoodId == id);
             _context.OrderDetails.RemoveRange(orderDetails);
 
-            // Delete the food
             _context.Foods.Remove(food);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "food deleted successfully" });
+            return Ok(new { message = "Food deleted successfully" });
         }
 
-
-        // ----------------------------
-        // 5) Make food unavailable
-        // ----------------------------
+       
         [HttpPatch("ChangeAvailability/{FoodId}")]
         public async Task<IActionResult> SetAvailability(int FoodId, [FromBody] FoodAvailabilityDto dto)
         {
@@ -118,6 +129,31 @@ namespace Code_Curry.Controllers
             food.IsAvailable = dto.IsAvailable;
             await _context.SaveChangesAsync();
             return NoContent();
+        }
+
+        [HttpGet("GetRestaurantFoods/{RestId}")]
+        public async Task<IActionResult> GetRestaurantFoods(int RestId)
+        {
+            var restaurant = await _context.Restaurants
+                .Include(r => r.Foods)
+                .FirstOrDefaultAsync(r => r.RestId == RestId);
+
+            if (restaurant == null) return NotFound();
+
+            var foods = restaurant.Foods.Select(f => new FoodResponseDto
+            {
+                FoodId = f.FoodId,
+                RestId = f.RestId,
+                Name = f.Name,
+                Description = f.Description,
+                Price = f.Price,
+                Category = f.Category,
+                IsAvailable = f.IsAvailable,
+                FoodImageUrl = f.FoodImageUrl,
+                RestaurantName = restaurant.Name
+            }).ToList();
+
+            return Ok(foods);
         }
     }
 }

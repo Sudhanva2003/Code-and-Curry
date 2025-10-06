@@ -19,6 +19,8 @@ public partial class Food
 
     public bool IsAvailable { get; set; }
 
+    public string FoodImageUrl { get; set; } = "https://static.vecteezy.com/system/resources/previews/004/204/922/non_2x/food-logo-template-design-icon-illustration-vector.jpg";
+
     public virtual ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
 
     public virtual Restaurant Rest { get; set; } = null!;

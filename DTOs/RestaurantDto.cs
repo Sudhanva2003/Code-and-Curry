@@ -24,5 +24,7 @@ namespace Code_Curry.DTOs
         [MinLength(6)]
         public string? Password { get; set; }
         public bool IsOpen { get; set; } = true;
+
+        public string? RestImageUrl { get; set; }
     }
 }

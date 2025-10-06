@@ -21,6 +21,8 @@ public partial class Restaurant
 
     public bool IsOpen { get; set; }
 
+    public string RestImageUrl { get; set; } =
+           "https://t3.ftcdn.net/jpg/03/24/73/92/360_F_324739203_keeq8udvv0P2h1MLYJ0GLSlTBagoXS48.jpg";
     public virtual ICollection<Food> Foods { get; set; } = new List<Food>();
 
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
