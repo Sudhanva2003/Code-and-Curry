@@ -72,16 +72,15 @@ namespace Code_Curry.Controllers
             var restaurant = await _context.Restaurants.FindAsync(RestId);
             if (restaurant == null) return NotFound("Restaurant not found");
 
-            var restaurantDetails = new RestaurantEditDto
-            {
-                Name = restaurant.Name,
-                Address = restaurant.Address,
-                Phone = restaurant.Phone,
-                IsOpen = restaurant.IsOpen
+            // Update fields from DTO
+            restaurant.Name = dto.Name;
+            restaurant.Address = dto.Address;
+            restaurant.Phone = dto.Phone;
+            restaurant.IsOpen = dto.IsOpen;
 
-            };
+            await _context.SaveChangesAsync();
 
-            return Ok(restaurantDetails);
+            return Ok(new { message = "Restaurant updated successfully" });
         }
         [HttpGet("ViewRestaurant/{RestId}")]
         public async Task<IActionResult> ViewRestaurant(int RestId)
@@ -212,6 +211,18 @@ namespace Code_Curry.Controllers
             return Ok(orders);
         }
 
+        [HttpDelete("DeleteRestaurant/{RestId}")]
+        public async Task<IActionResult> DeleteRestaurant(int RestId)
+        {
+            var restaurant = await _context.Restaurants.FindAsync(RestId);
+            if (restaurant == null)
+                return NotFound(new { message = "Restaurant not found" });
+
+            _context.Restaurants.Remove(restaurant);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Restaurant deleted successfully" });
+        }
 
         private string HashPassword(string password)
         {

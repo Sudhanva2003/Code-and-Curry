@@ -87,16 +87,24 @@ namespace Code_Curry.Controllers
         // ----------------------------
         // 4) Delete food method
         // ----------------------------
-        [HttpDelete("DeleteFood/{FoodId}")]
-        public async Task<IActionResult> DeleteFood(int FoodId)
+        [HttpDelete("DeleteFood/{id}")]
+        public async Task<IActionResult> DeleteFood(int id)
         {
-            var food = await _context.Foods.FindAsync(FoodId);
-            if (food == null) return NotFound();
+            var food = await _context.Foods.FindAsync(id);
+            if (food == null)
+                return NotFound();
 
+            // Manually delete order details referencing this food
+            var orderDetails = _context.OrderDetails.Where(od => od.FoodId == id);
+            _context.OrderDetails.RemoveRange(orderDetails);
+
+            // Delete the food
             _context.Foods.Remove(food);
             await _context.SaveChangesAsync();
-            return NoContent();
+
+            return Ok(new { message = "food deleted successfully" });
         }
+
 
         // ----------------------------
         // 5) Make food unavailable

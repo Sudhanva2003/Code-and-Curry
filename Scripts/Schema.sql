@@ -28,7 +28,7 @@ CREATE TABLE Food (
     Category NVARCHAR(50),
     IsAvailable BIT NOT NULL DEFAULT 1,
     FOREIGN KEY (RestId) REFERENCES Restaurant(RestId)
-        ON UPDATE CASCADE -- delete handled by trigger
+        ON UPDATE CASCADE -- delete handled manually
 );
 
 drop table food;
@@ -55,7 +55,7 @@ CREATE TABLE Orders (
     FOREIGN KEY (UserId) REFERENCES Users(UserId)
         ON UPDATE CASCADE ON DELETE CASCADE,
     FOREIGN KEY (RestId) REFERENCES Restaurant(RestId)
-        ON UPDATE CASCADE -- delete handled by trigger
+        ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 drop table orders;
@@ -66,39 +66,14 @@ CREATE TABLE OrderDetail (
     FoodId INT NOT NULL,
     Quantity INT NOT NULL,
     Price DECIMAL(10,2) NOT NULL,
-    FOREIGN KEY (OrderId) REFERENCES Orders(OrderId) 
+    FOREIGN KEY (OrderId) REFERENCES Orders(OrderId)
         ON UPDATE CASCADE ON DELETE CASCADE,
-    FOREIGN KEY (FoodId) REFERENCES Food(FoodId) 
+    FOREIGN KEY (FoodId) REFERENCES Food(FoodId)
         ON UPDATE NO ACTION ON DELETE NO ACTION
 );
 
-
-
 drop table orderdetail;
 
-CREATE TRIGGER trg_DeleteRestaurant
-ON Restaurant
-INSTEAD OF DELETE
-AS
-BEGIN
-    -- delete related Orders (will cascade to OrderDetail)
-    DELETE FROM Orders WHERE RestId IN (SELECT RestId FROM DELETED);
-
-    -- delete related Food (will cascade to OrderDetail)
-    DELETE FROM Food WHERE RestId IN (SELECT RestId FROM DELETED);
-
-    -- finally delete Restaurant
-    DELETE FROM Restaurant WHERE RestId IN (SELECT RestId FROM DELETED);
-END;
-
-CREATE TRIGGER trg_DeleteFood
-ON Food
-INSTEAD OF DELETE
-AS
-BEGIN
-    DELETE FROM OrderDetail WHERE FoodId IN (SELECT FoodId FROM DELETED);
-    DELETE FROM Food WHERE FoodId IN (SELECT FoodId FROM DELETED);
-END;
 
 
 INSERT INTO Restaurant (Name, Address, Rating, Phone, Email, PasswordHash, IsOpen)

@@ -288,7 +288,18 @@ namespace Code_Curry.Controllers
                 totalAmount = order.TotalAmount
             });
         }
+        [HttpDelete("DeleteUser/{UserId}")]
+        public async Task<IActionResult> DeleteUser(int UserId)
+        {
+            var user = await _context.Users.FindAsync(UserId);
+            if (user == null)
+                return NotFound(new { message = "User not found" });
 
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "User deleted successfully" });
+        }
 
 
         private string HashPassword(string password)
