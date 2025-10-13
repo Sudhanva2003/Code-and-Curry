@@ -14,7 +14,8 @@ CREATE TABLE Restaurant (
     Phone VARCHAR(15),
     Email NVARCHAR(100) NOT NULL,
     PasswordHash NVARCHAR(255) NOT NULL,
-    IsOpen BIT NOT NULL DEFAULT 1
+    IsOpen BIT NOT NULL DEFAULT 1,
+    RestImageUrl NVARCHAR(255) NULL
 );
 
 drop table restaurant;
@@ -27,6 +28,7 @@ CREATE TABLE Food (
     Price DECIMAL(10,2) NOT NULL,
     Category NVARCHAR(50),
     IsAvailable BIT NOT NULL DEFAULT 1,
+    FoodImageUrl NVARCHAR(255) NULL,
     FOREIGN KEY (RestId) REFERENCES Restaurant(RestId)
         ON UPDATE CASCADE -- delete handled manually
 );
@@ -76,86 +78,6 @@ drop table orderdetail;
 
 
 
-INSERT INTO Restaurant (Name, Address, Rating, Phone, Email, PasswordHash, IsOpen)
-VALUES ('Tandoori Tales', '12 Spice Street', 4.6, '9876543210', 'tandoori@example.com', 'hashpwd1', 1);
-
-INSERT INTO Restaurant (Name, Address, Rating, Phone, Email, PasswordHash, IsOpen)
-VALUES ('Pasta Paradise', '45 Olive Road', 4.3, '9123456780', 'pasta@example.com', 'hashpwd2', 0);
-
-INSERT INTO Food (RestId, Name, Description, Price, Category, IsAvailable)
-VALUES (1, 'Chicken Tikka', 'Grilled chicken marinated in spices', 299.00, 'Indian', 1);
-
-INSERT INTO Food (RestId, Name, Description, Price, Category, IsAvailable)
-VALUES (2, 'Spaghetti Alfredo', 'Creamy Alfredo pasta', 349.00, 'Italian', 1);
-
-INSERT INTO Users (FullName, Email, Phone, Address, PasswordHash, Role)
-VALUES ('David Warner', 'david@example.com', '8888888888', '78 Sunset Blvd', 'hashpwd3', 'Customer');
-
-INSERT INTO Users (FullName, Email, Phone, Address, PasswordHash, Role)
-VALUES ('Emily Clark', 'emily@example.com', '9999999999', '90 Sunrise Ave', 'hashpwd4', 'Delivery');
-
-INSERT INTO Orders (UserId, RestId, OrderDate, Status, TotalAmount)
-VALUES (1, 1, GETDATE(), 'Pending', 299.00);
-
-INSERT INTO Orders (UserId, RestId, OrderDate, Status, TotalAmount)
-VALUES (2, 2, GETDATE(), 'Delivered', 349.00);
-
-INSERT INTO OrderDetail (OrderId, FoodId, Quantity, Price)
-VALUES (1, 1, 2, 598.00); -- 2 Chicken Tikka
-
-INSERT INTO OrderDetail (OrderId, FoodId, Quantity, Price)
-VALUES (2, 2, 1, 349.00); -- 1 Spaghetti Alfredo
 
 
 
-
-
-
--- Before: check Orders & OrderDetail for UserId = 1
-SELECT * FROM Orders WHERE UserId = 1;
-SELECT * FROM OrderDetail WHERE OrderId IN (SELECT OrderId FROM Orders WHERE UserId = 1);
-
--- Delete User
-DELETE FROM Users WHERE UserId = 1;
-
--- After: confirm orders & orderdetails are gone
-SELECT * FROM Orders WHERE UserId = 1;
-SELECT * FROM OrderDetail WHERE OrderId IN (SELECT OrderId FROM Orders WHERE UserId = 1);
-
-
-
--- Before
-SELECT * FROM Orders WHERE RestId = 1;
-SELECT * FROM Food WHERE RestId = 1;
-SELECT * FROM OrderDetail WHERE OrderId IN (SELECT OrderId FROM Orders WHERE RestId = 1);
-
--- Delete Restaurant
-DELETE FROM Restaurant WHERE RestId = 1;
-
--- After
-SELECT * FROM Orders WHERE RestId = 1;
-SELECT * FROM Food WHERE RestId = 1;
-SELECT * FROM OrderDetail WHERE OrderId IN (SELECT OrderId FROM Orders WHERE RestId = 1);
-
-
--- Before
-SELECT * FROM Food WHERE FoodId = 2;
-SELECT * FROM OrderDetail WHERE FoodId = 2;
-
--- Delete Food
-DELETE FROM Food WHERE FoodId = 2;
-
--- After
-SELECT * FROM Food WHERE FoodId = 2;
-SELECT * FROM OrderDetail WHERE FoodId = 2;
-
--- Before
-SELECT * FROM Orders WHERE OrderId = 2;
-SELECT * FROM OrderDetail WHERE OrderId = 2;
-
--- Delete Order
-DELETE FROM Orders WHERE OrderId = 2;
-
--- After
-SELECT * FROM Orders WHERE OrderId = 2;
-SELECT * FROM OrderDetail WHERE OrderId = 2;
