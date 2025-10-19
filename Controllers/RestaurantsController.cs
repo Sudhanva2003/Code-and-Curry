@@ -210,8 +210,30 @@ namespace Code_Curry.Controllers
 
             return Ok(orders);
         }
+        [HttpGet("Search")]
+        public async Task<IActionResult> SearchRestaurants([FromQuery] string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return BadRequest("Search term is required.");
 
-       
+            var matchingRestaurants = await _context.Restaurants
+                .Where(r => r.Name.Contains(name)) // case-sensitive
+                                                   //.Where(r => EF.Functions.Like(r.Name, $"%{name}%")) // case-insensitive for SQL Server
+                .Select(r => new RestaurantSummaryDto
+                {
+                    RestId = r.RestId,
+                    Name = r.Name,
+                    Rating = r.Rating,
+                    IsOpen = r.IsOpen,
+                    RestImageUrl = r.RestImageUrl
+                })
+                .ToListAsync();
+
+            return Ok(matchingRestaurants);
+        }
+
+
+
         [HttpDelete("DeleteRestaurant/{RestId}")]
         public async Task<IActionResult> DeleteRestaurant(int RestId)
         {

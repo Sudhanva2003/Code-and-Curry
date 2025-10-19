@@ -155,5 +155,31 @@ namespace Code_Curry.Controllers
 
             return Ok(foods);
         }
+        [HttpGet("Search")]
+        public async Task<IActionResult> SearchFoods([FromQuery] string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return BadRequest("Search term is required.");
+
+            var matchingFoods = await _context.Foods
+                .Include(f => f.Rest)
+                .Where(f => EF.Functions.Like(f.Name, $"%{name}%")) // case-insensitive
+                .Select(f => new FoodResponseDto
+                {
+                    FoodId = f.FoodId,
+                    RestId = f.RestId,
+                    Name = f.Name,
+                    Description = f.Description,
+                    Price = f.Price,
+                    Category = f.Category,
+                    IsAvailable = f.IsAvailable,
+                    FoodImageUrl = f.FoodImageUrl,
+                    RestaurantName = f.Rest.Name
+                })
+                .ToListAsync();
+
+            return Ok(matchingFoods);
+        }
+
     }
 }

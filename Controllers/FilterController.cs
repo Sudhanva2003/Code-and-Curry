@@ -57,5 +57,62 @@ namespace Code_Curry.Controllers
 
             return Ok(result);
         }
+        [HttpGet("Foods")]
+        public async Task<IActionResult> GetFoods([FromQuery] int restId, [FromQuery] string category = "none", [FromQuery] string sort = "none")
+        {
+            var query = _context.Foods.AsQueryable();
+
+            // Filter by restaurant
+            query = query.Where(f => f.RestId == restId);
+
+            // Filter by category
+            if (!string.IsNullOrEmpty(category) && category.ToLower() != "none")
+            {
+                query = query.Where(f => f.Category.ToLower() == category.ToLower());
+            }
+
+            // Sort
+            if (!string.IsNullOrEmpty(sort))
+            {
+                switch (sort.ToLower())
+                {
+                    case "price":
+                        query = query.OrderBy(f => f.Price);
+                        break;
+                    // You can add more sorting options here later
+                    default:
+                        query = query.OrderBy(f => f.FoodId); // default sort
+                        break;
+                }
+            }
+
+            var foods = await query.ToListAsync();
+            return Ok(foods);
+        }
+
+        // GET: api/Filter/Restaurants?sort=rating
+        [HttpGet("Restaurants")]
+        public async Task<IActionResult> GetRestaurants([FromQuery] string sort = "rating")
+        {
+            var query = _context.Restaurants.AsQueryable();
+
+            if (!string.IsNullOrEmpty(sort))
+            {
+                switch (sort.ToLower())
+                {
+                    case "rating":
+                        query = query.OrderByDescending(r => r.Rating);
+                        break;
+                    case "distance":
+                        // For now, distance sorting logic can be added later
+                        query = query.OrderBy(r => r.RestId); // placeholder
+                        break;
+                }
+            }
+
+            var restaurants = await query.ToListAsync();
+            return Ok(restaurants);
+        }
     }
 }
+
