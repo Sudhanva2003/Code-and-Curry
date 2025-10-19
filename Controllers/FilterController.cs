@@ -113,6 +113,7 @@ namespace Code_Curry.Controllers
             var restaurants = await query.ToListAsync();
             return Ok(restaurants);
         }
+
     }
 }
 
