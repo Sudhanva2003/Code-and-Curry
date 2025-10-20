@@ -31,7 +31,7 @@ namespace Code_Curry.Controllers
                     Name = r.Name,
                     Address = r.Address,
                     Rating = r.Rating,
-                    IsOpen = r.IsOpen
+                    RestStatus = r.RestStatus
                 })
                 .ToListAsync();
 
@@ -45,7 +45,7 @@ namespace Code_Curry.Controllers
                     Description = f.Description,
                     Category = f.Category,
                     Price = f.Price,
-                    IsAvailable = f.IsAvailable
+                    FoodStatus = f.FoodStatus
                 })
                 .ToListAsync();
 

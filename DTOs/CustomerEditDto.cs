@@ -2,7 +2,7 @@
 
 namespace Code_Curry.DTOs
 {
-    public class EditUserDto
+    public class CustomerEditDto
     {
         
         [MaxLength(100)]

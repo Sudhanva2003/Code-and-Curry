@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿using Code_Curry.Dtos;
+using Code_Curry.DTOs;
 using Code_Curry.Models;
-using Code_Curry.Dtos;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -18,7 +19,6 @@ namespace Code_Curry.Controllers
             _context = context;
         }
 
-       
         [HttpPost("AddFood")]
         public async Task<ActionResult<FoodResponseDto>> AddFood([FromBody] FoodCreateDto dto)
         {
@@ -33,7 +33,7 @@ namespace Code_Curry.Controllers
                 Description = dto.Description,
                 Price = dto.Price,
                 Category = dto.Category,
-                IsAvailable = dto.IsAvailable,
+                FoodStatus = dto.FoodStatus,
                 FoodImageUrl = string.IsNullOrWhiteSpace(dto.FoodImageUrl)
                     ? "https://static.vecteezy.com/system/resources/previews/004/204/922/non_2x/food-logo-template-design-icon-illustration-vector.jpg"
                     : dto.FoodImageUrl
@@ -50,7 +50,7 @@ namespace Code_Curry.Controllers
                 Description = food.Description,
                 Price = food.Price,
                 Category = food.Category,
-                IsAvailable = food.IsAvailable,
+                FoodStatus = food.FoodStatus,
                 FoodImageUrl = food.FoodImageUrl,
                 RestaurantName = rest.Name
             };
@@ -58,13 +58,12 @@ namespace Code_Curry.Controllers
             return CreatedAtAction(nameof(GetFood), new { FoodId = food.FoodId }, foodDto);
         }
 
-      
         [HttpGet("GetFood/{FoodId}")]
         public async Task<ActionResult<FoodResponseDto>> GetFood(int FoodId)
         {
             var food = await _context.Foods
                 .Include(f => f.Rest)
-                .FirstOrDefaultAsync(f => f.FoodId == FoodId);
+                .FirstOrDefaultAsync(f => f.FoodId == FoodId && f.FoodStatus != "Deleted");
 
             if (food == null) return NotFound();
 
@@ -76,26 +75,24 @@ namespace Code_Curry.Controllers
                 Description = food.Description,
                 Price = food.Price,
                 Category = food.Category,
-                IsAvailable = food.IsAvailable,
+                FoodStatus = food.FoodStatus,
                 FoodImageUrl = food.FoodImageUrl,
                 RestaurantName = food.Rest.Name
             };
         }
 
-      
         [HttpPut("UpdateFood/{FoodId}")]
         public async Task<IActionResult> UpdateFood(int FoodId, [FromBody] FoodUpdateDto dto)
         {
             var food = await _context.Foods.FindAsync(FoodId);
-            if (food == null) return NotFound();
+            if (food == null || food.FoodStatus == "Deleted") return NotFound();
 
             food.Name = dto.Name;
             food.Description = dto.Description;
             food.Price = dto.Price;
             food.Category = dto.Category;
-            food.IsAvailable = dto.IsAvailable;
+            food.FoodStatus = dto.FoodStatus;
 
-            // Optional update for image URL
             if (!string.IsNullOrWhiteSpace(dto.FoodImageUrl))
                 food.FoodImageUrl = dto.FoodImageUrl;
 
@@ -103,30 +100,26 @@ namespace Code_Curry.Controllers
             return NoContent();
         }
 
-      
         [HttpDelete("DeleteFood/{id}")]
         public async Task<IActionResult> DeleteFood(int id)
         {
             var food = await _context.Foods.FindAsync(id);
-            if (food == null) return NotFound();
+            if (food == null || food.FoodStatus == "Deleted") return NotFound();
 
-            var orderDetails = _context.OrderDetails.Where(od => od.FoodId == id);
-            _context.OrderDetails.RemoveRange(orderDetails);
-
-            _context.Foods.Remove(food);
+            // Soft delete
+            food.FoodStatus = "Deleted";
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Food deleted successfully" });
+            return Ok(new { message = "Food marked as deleted" });
         }
 
-       
         [HttpPatch("ChangeAvailability/{FoodId}")]
         public async Task<IActionResult> SetAvailability(int FoodId, [FromBody] FoodAvailabilityDto dto)
         {
             var food = await _context.Foods.FindAsync(FoodId);
-            if (food == null) return NotFound();
+            if (food == null || food.FoodStatus == "Deleted") return NotFound();
 
-            food.IsAvailable = dto.IsAvailable;
+            food.FoodStatus = dto.FoodStatus;
             await _context.SaveChangesAsync();
             return NoContent();
         }
@@ -140,18 +133,21 @@ namespace Code_Curry.Controllers
 
             if (restaurant == null) return NotFound();
 
-            var foods = restaurant.Foods.Select(f => new FoodResponseDto
-            {
-                FoodId = f.FoodId,
-                RestId = f.RestId,
-                Name = f.Name,
-                Description = f.Description,
-                Price = f.Price,
-                Category = f.Category,
-                IsAvailable = f.IsAvailable,
-                FoodImageUrl = f.FoodImageUrl,
-                RestaurantName = restaurant.Name
-            }).ToList();
+            var foods = restaurant.Foods
+                .Where(f => f.FoodStatus != "Deleted") // Exclude deleted foods
+                .Select(f => new FoodResponseDto
+                {
+                    FoodId = f.FoodId,
+                    RestId = f.RestId,
+                    Name = f.Name,
+                    Description = f.Description,
+                    Price = f.Price,
+                    Category = f.Category,
+                    FoodStatus = f.FoodStatus,
+                    FoodImageUrl = f.FoodImageUrl,
+                    RestaurantName = restaurant.Name
+                })
+                .ToList();
 
             return Ok(foods);
         }

@@ -2,7 +2,7 @@
 
 namespace Code_Curry.DTOs
 {
-    public class CreateUserDto
+    public class CustomerSummaryDto
     {
         [Required]
         [MaxLength(100)]
@@ -20,12 +20,9 @@ namespace Code_Curry.DTOs
         [MaxLength(255)]
         public string Address { get; set; }
 
-        
+
         [MaxLength(10)]
         public string Role { get; set; }
 
-        [Required]
-        [MaxLength(255)]
-        public string Password { get; set; }  // will be hashed before storing
     }
 }

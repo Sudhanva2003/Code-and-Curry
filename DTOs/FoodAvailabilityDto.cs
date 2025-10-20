@@ -2,6 +2,6 @@
 {
     public class FoodAvailabilityDto
     {
-        public bool IsAvailable { get; set; }
+        public string FoodStatus { get; set; }
     }
 }

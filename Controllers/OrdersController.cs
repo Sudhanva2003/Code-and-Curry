@@ -26,21 +26,19 @@ namespace Code_Curry.Controllers
             if (dto == null || dto.OrderItems == null || !dto.OrderItems.Any())
                 return BadRequest("Order must have at least one item.");
 
-            // Fetch all foods for price and restaurant info
             var foodIds = dto.OrderItems.Select(x => x.FoodId).ToList();
             var foods = await _context.Foods
-                .Where(f => foodIds.Contains(f.FoodId))
+                .Where(f => foodIds.Contains(f.FoodId) && f.FoodStatus == "Available")
                 .ToListAsync();
 
             if (foods.Count != foodIds.Count)
-                return BadRequest("Some food items not found.");
+                return BadRequest("Some food items not found or unavailable.");
 
-            // Group order items by restaurant
             var itemsByRest = dto.OrderItems
                 .Join(foods, i => i.FoodId, f => f.FoodId, (i, f) => new { Item = i, Food = f })
                 .GroupBy(x => x.Food.RestId);
 
-            var generatedBills = new List<object>(); // anonymous object for OrderId on top
+            var generatedBills = new List<object>();
 
             foreach (var group in itemsByRest)
             {
@@ -49,7 +47,7 @@ namespace Code_Curry.Controllers
                     UserId = dto.UserId,
                     RestId = group.Key,
                     OrderDate = DateTime.UtcNow,
-                    Status = "Paid",
+                    Status = "Paid"
                 };
 
                 var orderDetails = new List<OrderDetail>();
@@ -60,34 +58,39 @@ namespace Code_Curry.Controllers
                     {
                         FoodId = x.Food.FoodId,
                         Quantity = x.Item.Quantity,
-                        Price = 0 // will be calculated in Bill
+                        Price = x.Food.Price * x.Item.Quantity
                     };
 
                     orderDetails.Add(detail);
                     order.OrderDetails.Add(detail);
                 }
 
-                // Generate the bill totals
+                // Generate the bill
                 var bill = Bill.GenerateBill(orderDetails, foods.Where(f => f.RestId == group.Key).ToList());
 
-                // Set total amount in order
-                order.TotalAmount = bill.FinalAmount;
+                // Populate new fields in order
+                order.TotalAmount = bill.Subtotal;
+                order.Discount = bill.Discount;
+                order.HandlingFee = bill.HandlingCharges;
+                order.PlatformFee = bill.PlatformFee;
+                order.DeliveryFee = bill.DeliveryFees;
+                order.GST = bill.SGST + bill.CGST;
+                order.FinalPrice = bill.FinalAmount;
 
-                // Add order to context
                 _context.Orders.Add(order);
-                await _context.SaveChangesAsync(); // OrderId populated here
+                await _context.SaveChangesAsync();
 
-                // Add OrderId on top of bill response
                 generatedBills.Add(new
                 {
                     orderId = order.OrderId,
-                    items = bill.Items,
+                    items = bill.Items, 
                     subtotal = bill.Subtotal,
-                    sgst = bill.SGST,
-                    cgst = bill.CGST,
-                    handlingCharges = bill.HandlingCharges,
-                    deliveryFees = bill.DeliveryFees,
-                    finalAmount = bill.FinalAmount
+                    discount = bill.Discount,
+                    gst = bill.SGST + bill.CGST,
+                    handlingFee = bill.HandlingCharges,
+                    platformFee = bill.PlatformFee,
+                    deliveryFee = bill.DeliveryFees,
+                    finalPrice = bill.FinalAmount
                 });
             }
 

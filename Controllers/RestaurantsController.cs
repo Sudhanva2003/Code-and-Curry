@@ -2,11 +2,8 @@ using Code_Curry.DTOs;
 using Code_Curry.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Code_Curry.Controllers
 {
@@ -21,26 +18,31 @@ namespace Code_Curry.Controllers
             _context = context;
         }
 
-       
+        // Register a new restaurant
         [HttpPost("RegisterRestaurant")]
         public async Task<IActionResult> RegisterRestaurant([FromBody] RestaurantDto dto)
         {
-            bool emailExists = await _context.Restaurants.AnyAsync(u => u.Email == dto.Email);
+            // Check if email exists in Restaurants or Users table
+            bool emailExists = await _context.Restaurants.AnyAsync(r => r.Email == dto.Email);
             bool userEmailExists = await _context.Users.AnyAsync(u => u.Email == dto.Email);
             if (emailExists || userEmailExists)
                 return Conflict("Email already exists."); // 409 Conflict
 
+            // Hash the password
             var hashedPassword = HashPassword(dto.Password);
 
             var restaurant = new Restaurant
             {
                 Name = dto.Name,
+                Address = dto.Address,
                 Email = dto.Email,
                 Phone = dto.Phone,
-                Address = dto.Address,
+                Cuisine=dto.Cuisine,
                 PasswordHash = hashedPassword,
-                Rating = dto.Rating,
-                IsOpen = dto.IsOpen,
+                GstNo = dto.GstNo,
+                FssaiNo = dto.FssaiNo,
+                RestStatus = dto.RestStatus,
+
                 RestImageUrl = string.IsNullOrWhiteSpace(dto.RestImageUrl)
                     ? "https://t3.ftcdn.net/jpg/03/24/73/92/360_F_324739203_keeq8udvv0P2h1MLYJ0GLSlTBagoXS48.jpg"
                     : dto.RestImageUrl
@@ -53,15 +55,16 @@ namespace Code_Curry.Controllers
             {
                 restaurant.RestId,
                 restaurant.Name,
-                restaurant.Email,
                 restaurant.Address,
-                restaurant.Rating,
-                restaurant.IsOpen,
-                restaurant.RestImageUrl
+                restaurant.Email,
+                restaurant.RestStatus,
+                restaurant.RestImageUrl,
+                restaurant.GstNo,
+                restaurant.FssaiNo
             });
         }
 
-       
+        // Edit restaurant details
         [HttpPut("EditRestaurant/{RestId}")]
         public async Task<IActionResult> EditRestaurant(int RestId, [FromBody] RestaurantEditDto dto)
         {
@@ -71,17 +74,25 @@ namespace Code_Curry.Controllers
             restaurant.Name = dto.Name;
             restaurant.Address = dto.Address;
             restaurant.Phone = dto.Phone;
-            restaurant.IsOpen = dto.IsOpen;
+          
 
-            // Optional update for image URL
             if (!string.IsNullOrWhiteSpace(dto.RestImageUrl))
                 restaurant.RestImageUrl = dto.RestImageUrl;
 
+            if (!string.IsNullOrWhiteSpace(dto.Cuisine))
+                restaurant.Cuisine = dto.Cuisine;
+
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Restaurant updated successfully", restaurant.RestImageUrl });
+
+            return Ok(new
+            {
+                message = "Restaurant updated successfully",
+                restaurant.RestImageUrl,
+               
+            });
         }
 
-       
+        // View restaurant profile
         [HttpGet("ViewRestaurant/{RestId}")]
         public async Task<IActionResult> ViewRestaurant(int RestId)
         {
@@ -95,14 +106,16 @@ namespace Code_Curry.Controllers
                 Rating = restaurant.Rating,
                 Phone = restaurant.Phone,
                 Email = restaurant.Email,
-                IsOpen = restaurant.IsOpen,
-                RestImageUrl = restaurant.RestImageUrl
+                RestStatus = restaurant.RestStatus,
+                RestImageUrl = restaurant.RestImageUrl,
+                GstNo = restaurant.GstNo,
+                FssaiNo = restaurant.FssaiNo
             };
 
             return Ok(restaurantDetails);
         }
 
-       
+        // Get restaurant menu
         [HttpGet("Menu/{RestId}")]
         public async Task<IActionResult> ViewMenu(int RestId)
         {
@@ -112,57 +125,51 @@ namespace Code_Curry.Controllers
 
             if (restaurant == null) return NotFound("Restaurant not found");
 
-            var menu = restaurant.Foods.Select(f => new MenuItemDto
-            {
-                FoodId = f.FoodId,
-                Name = f.Name,
-                Category = f.Category,
-                Description = f.Description,
-                Price = f.Price,
-                IsAvailable = f.IsAvailable,
-                FoodImageUrl = f.FoodImageUrl
-            }).ToList();
+            // Only include foods that are not deleted
+            var menu = restaurant.Foods
+                .Where(f => f.FoodStatus != "Deleted")   // <-- filter out deleted
+                .Select(f => new MenuItemDto
+                {
+                    FoodId = f.FoodId,
+                    Name = f.Name,
+                    Category = f.Category,
+                    Description = f.Description,
+                    Price = f.Price,
+                    FoodStatus = f.FoodStatus,
+                    FoodImageUrl = f.FoodImageUrl
+                })
+                .ToList();
 
             return Ok(menu);
         }
 
-       
-        [HttpPut("Prepared/{orderId}")]
-        public async Task<IActionResult> MarkOrderPrepared(int orderId)
-        {
-            var order = await _context.Orders.FindAsync(orderId);
-            if (order == null) return NotFound("Order not found");
 
-            order.Status = "Prepared";
-            await _context.SaveChangesAsync();
-            return Ok("Order marked as prepared");
-        }
-
-       
+        // Get restaurants by rating (Home page)
         [HttpGet("Home")]
         public async Task<IActionResult> GetRestaurantsByRating()
         {
             var restaurants = await _context.Restaurants
-                .Where(r => r.IsOpen)
+                .Where(r => r.RestStatus == "Open" || r.RestStatus == "Closed")
                 .OrderByDescending(r => r.Rating)
                 .Select(r => new RestaurantSummaryDto
                 {
                     RestId = r.RestId,
                     Name = r.Name,
                     Rating = r.Rating,
-                    IsOpen = r.IsOpen,
+                    RestStatus = r.RestStatus,
                     RestImageUrl = r.RestImageUrl
-                }).ToListAsync();
+                })
+                .ToListAsync();
 
             return Ok(restaurants);
         }
 
-    
+        // View restaurant open orders
         [HttpGet("ViewRestaurantOpenOrders/{RestId}")]
         public async Task<IActionResult> ViewRestaurantOpenOrders(int RestId)
         {
             var orders = await _context.Orders
-                .Where(o => o.RestId == RestId && o.Status == "Paid")
+                .Where(o => o.RestId == RestId && o.Status == "Paid"&& o.User.UserStatus == "Active")
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Food)
                 .OrderByDescending(o => o.OrderDate)
@@ -184,7 +191,7 @@ namespace Code_Curry.Controllers
             return Ok(orders);
         }
 
-       
+        // View restaurant past orders
         [HttpGet("ViewRestaurantPastOrders/{RestId}")]
         public async Task<IActionResult> ViewRestaurantPastOrders(int RestId)
         {
@@ -199,6 +206,10 @@ namespace Code_Curry.Controllers
                     o.OrderDate,
                     o.Status,
                     o.TotalAmount,
+                    o.Discount,
+                    o.HandlingFee,
+                    o.GST,
+                    FinalPrice = o.TotalAmount - o.Discount + o.GST+o.HandlingFee,
                     Items = o.OrderDetails.Select(od => new
                     {
                         od.Food.Name,
@@ -211,7 +222,35 @@ namespace Code_Curry.Controllers
             return Ok(orders);
         }
 
-       
+        [HttpPut("Prepared/{orderId}")]
+        public async Task<IActionResult> MarkOrderPrepared(int orderId)
+        {
+            var order = await _context.Orders.FindAsync(orderId);
+            if (order == null) return NotFound("Order not found");
+
+            order.Status = "Prepared";
+            await _context.SaveChangesAsync();
+            return Ok("Order marked as prepared");
+        }
+
+        [HttpPatch("SetRestaurantStatus/{RestId}")]
+        public async Task<IActionResult> SetRestaurantStatus(int RestId, [FromQuery] string action)
+        {
+            var restaurant = await _context.Restaurants.FindAsync(RestId);
+            if (restaurant == null) return NotFound("Restaurant not found.");
+
+            action = action?.ToLower();
+            if (action != "open" && action != "close")
+                return BadRequest("Invalid action. Use 'open' or 'close'.");
+
+            restaurant.RestStatus = action == "open" ? "Open" : "Closed";
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = $"Restaurant is now {restaurant.RestStatus}.", restaurant.RestStatus });
+        }
+
+
+        // Delete restaurant (soft delete)
         [HttpDelete("DeleteRestaurant/{RestId}")]
         public async Task<IActionResult> DeleteRestaurant(int RestId)
         {
@@ -219,12 +258,13 @@ namespace Code_Curry.Controllers
             if (restaurant == null)
                 return NotFound(new { message = "Restaurant not found" });
 
-            _context.Restaurants.Remove(restaurant);
+            restaurant.RestStatus = "Deleted";
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Restaurant deleted successfully" });
+            return Ok(new { message = "Restaurant marked as deleted" });
         }
 
+        // Helper method to hash passwords
         private string HashPassword(string password)
         {
             using var sha256 = SHA256.Create();

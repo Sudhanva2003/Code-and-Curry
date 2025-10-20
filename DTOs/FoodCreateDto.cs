@@ -20,7 +20,7 @@ public class FoodCreateDto
    
     public string Category { get; set; }
 
-    public bool IsAvailable { get; set; } = true;
+    public string FoodStatus { get; set; } = "Available";
 
     public string? FoodImageUrl { get; set; }
 }
