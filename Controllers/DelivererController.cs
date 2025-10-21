@@ -27,18 +27,14 @@ namespace Code_Curry.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // Check if email already exists
             var existingUser = await _context.Users
                 .FirstOrDefaultAsync(u => u.Email == request.Email);
 
             if (existingUser != null)
                 return Conflict(new { message = "Email already registered." });
 
-            // Hash the password
-            
-
             var passwordHash = HashPassword(request.Password);
-            // Create Deliverer user
+
             var deliverer = new User
             {
                 FullName = request.FullName,
@@ -58,14 +54,13 @@ namespace Code_Curry.Controllers
             return Ok(new { message = "Deliverer registered successfully", delivererId = deliverer.UserId });
         }
 
-        
         [HttpGet("ViewLiveOrders")]
         public async Task<IActionResult> ViewLiveOrders()
         {
             var liveOrders = await _context.Orders
                 .Include(o => o.Rest)
                 .Include(o => o.User)
-                .Where(o => o.Status == "Prepared"||o.Status=="Paid"
+                .Where(o => (o.Status == "Prepared" || o.Status == "Paid")
                             && o.Rest.RestStatus != "Deleted"
                             && o.User.UserStatus != "Deleted")
                 .Select(o => new
@@ -80,8 +75,6 @@ namespace Code_Curry.Controllers
 
             return Ok(liveOrders);
         }
-
-
 
         [HttpPut("AssignOrder/{orderId}")]
         public async Task<IActionResult> AssignOrder(int orderId, [FromBody] AssignOrderRequest request)
@@ -104,8 +97,6 @@ namespace Code_Curry.Controllers
             await _context.SaveChangesAsync();
             return Ok("Order assigned successfully.");
         }
-
-
 
         [HttpGet("DeliveryDetail/{orderId}")]
         public async Task<IActionResult> DeliveryDetail(int orderId)
@@ -136,8 +127,6 @@ namespace Code_Curry.Controllers
             return Ok(result);
         }
 
-
-      
         [HttpPut("MarkDelivered/{orderId}")]
         public async Task<IActionResult> MarkDelivered(int orderId)
         {
@@ -146,12 +135,12 @@ namespace Code_Curry.Controllers
                 return NotFound("Order not found.");
 
             order.Status = "Delivered";
-            await _context.SaveChangesAsync();
+            order.DeliveryDate = DateTime.UtcNow; // ✅ Set delivery date
 
+            await _context.SaveChangesAsync();
             return Ok("Order marked as delivered.");
         }
 
-       
         [HttpGet("ViewDeliveredOrders/{delivererId}")]
         public async Task<IActionResult> ViewDeliveredOrders(int delivererId)
         {
@@ -164,14 +153,14 @@ namespace Code_Curry.Controllers
                     o.OrderId,
                     RestaurantAddress = o.Rest.Address,
                     CustomerAddress = o.User.Address,
-                    o.DeliveryFee
+                    o.DeliveryFee,
+                    o.DeliveryDate // ✅ Include delivery date for filtering
                 })
                 .ToListAsync();
 
             return Ok(orders);
         }
 
-       
         [HttpGet("DelivererProfile/{delivererId}")]
         public async Task<IActionResult> DelivererProfile(int delivererId)
         {
@@ -184,7 +173,7 @@ namespace Code_Curry.Controllers
                     Email = u.Email,
                     Phone = u.Phone,
                     Address = u.Address,
-                    Rating=u.Rating,
+                    Rating = u.Rating,
                     VehicleNumber = u.VehicleNumber!,
                     LicenseNumber = u.LicenseNumber!
                 })
@@ -196,7 +185,6 @@ namespace Code_Curry.Controllers
             return Ok(deliverer);
         }
 
-        // 7️⃣ EditDeliverer(delivererId)
         [HttpPut("EditDeliverer/{delivererId}")]
         public async Task<IActionResult> EditDeliverer(int delivererId, [FromBody] EditDelivererDto dto)
         {
@@ -213,7 +201,6 @@ namespace Code_Curry.Controllers
             return Ok("Deliverer details updated successfully.");
         }
 
-        // 8️⃣ DeleteDeliverer(delivererId) — soft delete
         [HttpDelete("DeleteDeliverer/{delivererId}")]
         public async Task<IActionResult> DeleteDeliverer(int delivererId)
         {

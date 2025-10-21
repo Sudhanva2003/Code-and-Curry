@@ -77,6 +77,8 @@ CREATE TABLE Orders (
     FOREIGN KEY (DelivererId) REFERENCES Users(UserId)
 );
 
+ALTER TABLE Orders
+ADD DeliveryDate DATETIME NULL;
 
 
 drop table orders;
@@ -93,9 +95,3 @@ CREATE TABLE OrderDetail (
 
 
 drop table orderdetail;
-
-
-
-
-
-

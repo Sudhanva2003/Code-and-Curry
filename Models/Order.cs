@@ -59,4 +59,5 @@ public partial class Order
     [ForeignKey("UserId")]
     [InverseProperty("OrderUsers")]
     public virtual User User { get; set; } = null!;
+    public DateTime? DeliveryDate { get; set; }
 }

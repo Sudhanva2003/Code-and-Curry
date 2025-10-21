@@ -25,6 +25,7 @@ namespace Code_Curry.DTOs
 
             [StringLength(20)]
             public string? VehicleNumber { get; set; }
+
         
 
     }
