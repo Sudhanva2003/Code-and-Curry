@@ -7,23 +7,37 @@ namespace Code_Curry.DTOs
         [Required]
         [MaxLength(100)]
         public string Name { get; set; } = null!;
+
         [Required]
-        [MaxLength(100)]
+        [MaxLength(255)]
         public string Address { get; set; } = null!;
+
+
         [Required]
-       public decimal? Rating { get; set; }
-        [Required]
-        [MaxLength(10)]
-        public string? Phone { get; set; }
+        [MaxLength(15)]
+        public string Phone { get; set; }
+
+        public string Cuisine { get; set; }
+
         [Required]
         [EmailAddress]
         [MaxLength(100)]
-        public string? Email { get; set; }
-        [Required]
+        public string Email { get; set; }
 
+        [Required]
         [MinLength(6)]
-        public string? Password { get; set; }
-        public bool IsOpen { get; set; } = true;
+        public string Password { get; set; }
+
+        [Required]
+        [MaxLength(15)]
+        public string GstNo { get; set; } = null!;
+
+        [Required]
+        [MaxLength(14)]
+        public string FssaiNo { get; set; } = null!;
+
+        [MaxLength(20)]
+        public string RestStatus { get; set; } = "Open";  // Open, Closed, Deleted
 
         public string? RestImageUrl { get; set; }
     }

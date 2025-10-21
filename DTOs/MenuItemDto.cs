@@ -18,8 +18,8 @@ namespace Code_Curry.DTOs
         [Required]
         [MaxLength(100)]
         public decimal Price { get; set; }
-        [Required]
-            public bool IsAvailable { get; set; }
+       
+            public string FoodStatus { get; set; }
 
         public string? FoodImageUrl { get; set; }
 

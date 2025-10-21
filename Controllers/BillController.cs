@@ -33,11 +33,17 @@ namespace Code_Curry.Controllers
             }
 
             bill.Subtotal = subtotal;
-            bill.SGST = subtotal * 0.09m;
-            bill.CGST = subtotal * 0.09m;
-            bill.HandlingCharges = totalFoodItems * 5;
-            bill.DeliveryFees = 50;
-            bill.FinalAmount = subtotal + bill.SGST + bill.CGST + bill.HandlingCharges + bill.DeliveryFees;
+
+            // Example calculations for new fields
+            bill.Discount = subtotal * 0.05m;         // 5% discount for example
+            bill.PlatformFee = subtotal * 0.02m;      // 2% platform fee
+            bill.HandlingCharges = totalFoodItems * 5; // per item
+            bill.DeliveryFees = 50;                    // flat delivery fee
+            bill.SGST = (subtotal - bill.Discount) * 0.09m;
+            bill.CGST = (subtotal - bill.Discount) * 0.09m;
+
+            bill.FinalAmount = subtotal - bill.Discount + bill.SGST + bill.CGST +
+                               bill.HandlingCharges + bill.DeliveryFees + bill.PlatformFee;
 
             return bill;
         }

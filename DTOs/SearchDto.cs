@@ -19,7 +19,7 @@ namespace Code_Curry.DTOs
         public decimal? Rating { get; set; }
 
         [Required]
-        public bool IsOpen { get; set; }
+        public string RestStatus { get; set; }
     }
 
     public class FoodSearchDto
@@ -44,6 +44,6 @@ namespace Code_Curry.DTOs
         public string? Category { get; set; }
 
         [Required]
-        public bool IsAvailable { get; set; }
+        public string FoodStatus { get; set; }
     }
 }

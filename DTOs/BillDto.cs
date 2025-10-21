@@ -1,13 +1,14 @@
 ﻿namespace Code_Curry.DTOs
 {
-
     public class BillDto
     {
         public List<BillItemDto> Items { get; set; } = new List<BillItemDto>();
         public decimal Subtotal { get; set; }
+        public decimal Discount { get; set; }          // New
         public decimal SGST { get; set; }
         public decimal CGST { get; set; }
         public decimal HandlingCharges { get; set; }
+        public decimal PlatformFee { get; set; }      // New
         public decimal DeliveryFees { get; set; }
         public decimal FinalAmount { get; set; }
     }
