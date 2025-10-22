@@ -74,6 +74,7 @@ namespace Code_Curry.Controllers
             restaurant.Name = dto.Name;
             restaurant.Address = dto.Address;
             restaurant.Phone = dto.Phone;
+            restaurant.RestStatus = dto.RestStatus;
           
 
             if (!string.IsNullOrWhiteSpace(dto.RestImageUrl))
@@ -87,8 +88,8 @@ namespace Code_Curry.Controllers
             return Ok(new
             {
                 message = "Restaurant updated successfully",
-                restaurant.RestImageUrl,
-               
+                restaurant.RestStatus,
+
             });
         }
 
