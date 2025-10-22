@@ -135,7 +135,7 @@ namespace Code_Curry.Controllers
                 return NotFound("Order not found.");
 
             order.Status = "Delivered";
-            order.DeliveryDate = DateTime.UtcNow; // ✅ Set delivery date
+            order.OrderDate = DateTime.UtcNow; // ✅ Set delivery date
 
             await _context.SaveChangesAsync();
             return Ok("Order marked as delivered.");
@@ -154,7 +154,7 @@ namespace Code_Curry.Controllers
                     RestaurantAddress = o.Rest.Address,
                     CustomerAddress = o.User.Address,
                     o.DeliveryFee,
-                    o.DeliveryDate // ✅ Include delivery date for filtering
+                    o.OrderDate // ✅ Include delivery date for filtering
                 })
                 .ToListAsync();
 

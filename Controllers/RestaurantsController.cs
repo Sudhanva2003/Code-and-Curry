@@ -196,7 +196,7 @@ namespace Code_Curry.Controllers
         public async Task<IActionResult> ViewRestaurantPastOrders(int RestId)
         {
             var orders = await _context.Orders
-                .Where(o => o.RestId == RestId && o.Status == "Prepared")
+                .Where(o => o.RestId == RestId && o.Status == "Prepared"||o.Status=="Delivered")
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Food)
                 .OrderByDescending(o => o.OrderDate)
