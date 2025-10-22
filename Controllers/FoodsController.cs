@@ -176,6 +176,31 @@ namespace Code_Curry.Controllers
 
             return Ok(matchingFoods);
         }
+        [HttpGet("SearchRestaurantsByFoodName")]
+        public async Task<IActionResult> SearchRestaurantsByFoodName([FromQuery] string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return BadRequest("Food name is required.");
+
+            var matchingRestaurants = await _context.Foods
+                .Include(f => f.Rest)
+                .Where(f => f.FoodStatus != "Deleted" && EF.Functions.Like(f.Name, $"%{name}%"))
+                .Select(f => new
+                {
+                    f.Rest.RestId,
+                    f.Rest.Name,
+                    f.Rest.Address,
+                    f.Rest.Rating,
+                    f.Rest.RestStatus,
+                    f.Rest.RestImageUrl,
+                    MatchedFood = f.Name
+                })
+                .Distinct()
+                .ToListAsync();
+
+            return Ok(matchingRestaurants);
+        }
+
 
     }
 }
