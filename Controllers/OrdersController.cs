@@ -46,7 +46,7 @@ namespace Code_Curry.Controllers
                 {
                     UserId = dto.UserId,
                     RestId = group.Key,
-                    OrderDate = DateTime.UtcNow,
+                    OrderDate = DateTimeOffset.Now,
                     Status = "Paid"
                 };
 
@@ -74,7 +74,7 @@ namespace Code_Curry.Controllers
                 order.HandlingFee = bill.HandlingCharges;
                 order.PlatformFee = bill.PlatformFee;
                 order.DeliveryFee = bill.DeliveryFees;
-                order.GST = bill.SGST + bill.CGST;
+                order.Gst = bill.SGST + bill.CGST;
                 order.FinalPrice = bill.FinalAmount;
 
                 _context.Orders.Add(order);
