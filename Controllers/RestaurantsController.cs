@@ -37,7 +37,7 @@ namespace Code_Curry.Controllers
                 Address = dto.Address,
                 Email = dto.Email,
                 Phone = dto.Phone,
-                Cuisine=dto.Cuisine,
+                Cuisine = dto.Cuisine,
                 PasswordHash = hashedPassword,
                 GstNo = dto.GstNo,
                 FssaiNo = dto.FssaiNo,
@@ -74,7 +74,6 @@ namespace Code_Curry.Controllers
             restaurant.Name = dto.Name;
             restaurant.Address = dto.Address;
             restaurant.Phone = dto.Phone;
-          
 
             if (!string.IsNullOrWhiteSpace(dto.RestImageUrl))
                 restaurant.RestImageUrl = dto.RestImageUrl;
@@ -88,7 +87,6 @@ namespace Code_Curry.Controllers
             {
                 message = "Restaurant updated successfully",
                 restaurant.RestImageUrl,
-               
             });
         }
 
@@ -109,7 +107,8 @@ namespace Code_Curry.Controllers
                 RestStatus = restaurant.RestStatus,
                 RestImageUrl = restaurant.RestImageUrl,
                 GstNo = restaurant.GstNo,
-                FssaiNo = restaurant.FssaiNo
+                FssaiNo = restaurant.FssaiNo,
+                Cuisine = restaurant.Cuisine
             };
 
             return Ok(restaurantDetails);
@@ -127,7 +126,7 @@ namespace Code_Curry.Controllers
 
             // Only include foods that are not deleted
             var menu = restaurant.Foods
-                .Where(f => f.FoodStatus != "Deleted")   // <-- filter out deleted
+                .Where(f => f.FoodStatus != "Deleted")
                 .Select(f => new MenuItemDto
                 {
                     FoodId = f.FoodId,
@@ -142,7 +141,6 @@ namespace Code_Curry.Controllers
 
             return Ok(menu);
         }
-
 
         // Get restaurants by rating (Home page)
         [HttpGet("Home")]
@@ -169,7 +167,7 @@ namespace Code_Curry.Controllers
         public async Task<IActionResult> ViewRestaurantOpenOrders(int RestId)
         {
             var orders = await _context.Orders
-                .Where(o => o.RestId == RestId && o.Status == "Paid"&& o.User.UserStatus == "Active")
+                .Where(o => o.RestId == RestId && o.Status == "Paid" && o.User.UserStatus == "Active")
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Food)
                 .OrderByDescending(o => o.OrderDate)
@@ -209,7 +207,7 @@ namespace Code_Curry.Controllers
                     o.Discount,
                     o.HandlingFee,
                     o.GST,
-                    FinalPrice = o.TotalAmount - o.Discount + o.GST+o.HandlingFee,
+                    FinalPrice = o.TotalAmount - o.Discount + o.GST + o.HandlingFee,
                     Items = o.OrderDetails.Select(od => new
                     {
                         od.Food.Name,
@@ -221,6 +219,8 @@ namespace Code_Curry.Controllers
 
             return Ok(orders);
         }
+
+        // Search restaurants
         [HttpGet("Search")]
         public async Task<IActionResult> SearchRestaurants([FromQuery] string name)
         {
@@ -228,22 +228,21 @@ namespace Code_Curry.Controllers
                 return BadRequest("Search term is required.");
 
             var matchingRestaurants = await _context.Restaurants
-                .Where(r => r.Name.Contains(name)) // case-sensitive
-                                                   //.Where(r => EF.Functions.Like(r.Name, $"%{name}%")) // case-insensitive for SQL Server
+                .Where(r => r.Name.Contains(name))
                 .Select(r => new RestaurantSummaryDto
                 {
                     RestId = r.RestId,
                     Name = r.Name,
                     Rating = r.Rating,
-                    //IsOpen = r.IsOpen,
-                    RestImageUrl = r.RestImageUrl
+                    RestImageUrl = r.RestImageUrl,
+                    RestStatus = r.RestStatus
                 })
                 .ToListAsync();
 
             return Ok(matchingRestaurants);
         }
 
-
+        // Mark order as prepared
         [HttpPut("Prepared/{orderId}")]
         public async Task<IActionResult> MarkOrderPrepared(int orderId)
         {
@@ -254,23 +253,6 @@ namespace Code_Curry.Controllers
             await _context.SaveChangesAsync();
             return Ok("Order marked as prepared");
         }
-
-        [HttpPatch("SetRestaurantStatus/{RestId}")]
-        public async Task<IActionResult> SetRestaurantStatus(int RestId, [FromQuery] string action)
-        {
-            var restaurant = await _context.Restaurants.FindAsync(RestId);
-            if (restaurant == null) return NotFound("Restaurant not found.");
-
-            action = action?.ToLower();
-            if (action != "open" && action != "close")
-                return BadRequest("Invalid action. Use 'open' or 'close'.");
-
-            restaurant.RestStatus = action == "open" ? "Open" : "Closed";
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = $"Restaurant is now {restaurant.RestStatus}.", restaurant.RestStatus });
-        }
-
 
         // Delete restaurant (soft delete)
         [HttpDelete("DeleteRestaurant/{RestId}")]
@@ -292,6 +274,33 @@ namespace Code_Curry.Controllers
             using var sha256 = SHA256.Create();
             var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
             return Convert.ToBase64String(bytes);
+        }
+
+        // ? Toggle restaurant open/close status
+        [HttpPatch("ChangeAvailability/{restId}")]
+        public async Task<IActionResult> ChangeRestaurantAvailability(int restId)
+        {
+            try
+            {
+                var restaurant = await _context.Restaurants.FindAsync(restId);
+                if (restaurant == null)
+                    return NotFound(new { message = "Restaurant not found" });
+
+                restaurant.RestStatus = restaurant.RestStatus == "Open" ? "Closed" : "Open";
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = $"Restaurant {(restaurant.RestStatus == "Open" ? "opened" : "closed")} successfully",
+                    restId = restaurant.RestId,
+                    name = restaurant.Name,
+                    restStatus = restaurant.RestStatus
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "Error updating restaurant availability", error = ex.Message });
+            }
         }
     }
 }
