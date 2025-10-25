@@ -5,6 +5,7 @@ select*from Food;
 select*from Users;
 select*from orders;
 select*from Orderdetail;
+select*from SupportTicket;
 
 CREATE TABLE Restaurant (
     RestId INT IDENTITY(1,1) PRIMARY KEY,
@@ -15,9 +16,10 @@ CREATE TABLE Restaurant (
     Phone VARCHAR(15) NOT NULL,
     Email NVARCHAR(100) NOT NULL,
     PasswordHash NVARCHAR(255) NOT NULL,
-    GstNo VARCHAR(15) NOT NULL,          -- GST numbers are alphanumeric (15 characters)
-    FssaiNo VARCHAR(14) NOT NULL,        -- FSSAI License numbers are 14 digits
-    RestStatus NVARCHAR(20) NOT NULL DEFAULT 'Open',  -- Open, Closed, Deleted
+    offerPercent int null,
+    GstNo VARCHAR(15) NOT NULL,          
+    FssaiNo VARCHAR(14) NOT NULL,       
+    RestStatus NVARCHAR(20) NOT NULL DEFAULT 'Open',  
     RestImageUrl NVARCHAR(255) NULL
 );
 
@@ -31,7 +33,7 @@ CREATE TABLE Food (
     Description NVARCHAR(255) NULL,
     Price MONEY NOT NULL,
     Category NVARCHAR(50) NULL,
-    FoodStatus NVARCHAR(20) NOT NULL DEFAULT 'Available', -- Available, NotAvailable, Deleted
+    FoodStatus NVARCHAR(20) NOT NULL DEFAULT 'Available', 
     FoodImageUrl NVARCHAR(255) NULL,
     FOREIGN KEY (RestId) REFERENCES Restaurant(RestId)
 );
@@ -48,9 +50,9 @@ CREATE TABLE Users (
     Address NVARCHAR(255) NULL,
     PasswordHash NVARCHAR(255) NOT NULL,
     UserStatus NVARCHAR(20) NOT NULL DEFAULT 'Active',
-    Role NVARCHAR(20) DEFAULT 'Customer',   -- Can be 'Customer' or 'Deliverer'
-    LicenseNumber NVARCHAR(50) NULL,        -- Optional, used only for deliverers
-    VehicleNumber NVARCHAR(20) NULL         -- Optional, used only for deliverers
+    Role NVARCHAR(20) DEFAULT 'Customer',  
+    LicenseNumber NVARCHAR(50) NULL,       
+    VehicleNumber NVARCHAR(20) NULL        
 );
 
 
@@ -61,9 +63,8 @@ CREATE TABLE Orders (
     OrderId INT IDENTITY(1,1) PRIMARY KEY,
     UserId INT NOT NULL,
     RestId INT NOT NULL,
-    DelivererId INT NULL,                          -- Will be NULL until a deliverer accepts
-    OrderDate DATETIME NOT NULL DEFAULT GETDATE(),
-    Rating Decimal(2,1) NULL Default 4.0,
+    DelivererId INT NULL,                         
+    OrderDate DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
     Status NVARCHAR(20) NOT NULL DEFAULT 'Pending',
     TotalAmount MONEY NOT NULL,
     Discount MONEY NULL,           -- Discount on the order
@@ -77,8 +78,6 @@ CREATE TABLE Orders (
     FOREIGN KEY (DelivererId) REFERENCES Users(UserId)
 );
 
-ALTER TABLE Orders
-ADD DeliveryDate DATETIME NULL;
 
 
 drop table orders;
@@ -95,3 +94,27 @@ CREATE TABLE OrderDetail (
 
 
 drop table orderdetail;
+
+CREATE TABLE SupportTicket (
+    TicketId INT IDENTITY(1,1) PRIMARY KEY,
+    UserId INT NULL,                        
+    RestId INT NULL,                    
+    Email NVARCHAR(100) NOT NULL,              
+    Category NVARCHAR(100) NOT NULL,           
+    Description NVARCHAR(1000) NOT NULL,       
+    CreatedDate DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),  -- Use DATETIMEOFFSET to store time zone info
+    AssignedAdminId INT NULL,
+    AdminMessage NVARCHAR(1000) NULL,
+    ResolvedDate DATETIMEOFFSET NULL,          -- Use DATETIMEOFFSET for resolved date as well
+    TicketStatus NVARCHAR(20) NOT NULL DEFAULT 'Open',  
+
+    FOREIGN KEY (UserId) REFERENCES Users(UserId),
+    FOREIGN KEY (RestId) REFERENCES Restaurant(RestId),
+    FOREIGN KEY (AssignedAdminId) REFERENCES Users(UserId)
+);
+
+
+drop table SupportTicket;
+
+
+
