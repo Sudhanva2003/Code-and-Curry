@@ -21,10 +21,14 @@ namespace Code_Curry.Controllers
             if (string.IsNullOrWhiteSpace(query))
                 return BadRequest("Search query is required");
 
-            query = query.ToLower();
+            query = query.Trim().ToLower();
 
             var matchedRestaurants = await _context.Restaurants
-                .Where(r => r.Name.ToLower().Contains(query) || r.Address.ToLower().Contains(query))
+                .Where(r =>
+                    EF.Functions.Like(r.Name.ToLower(), $"%{query}%") ||
+                    EF.Functions.Like(r.Address.ToLower(), $"%{query}%") ||
+                    (!string.IsNullOrEmpty(r.Cuisine) && EF.Functions.Like(r.Cuisine.ToLower(), $"%{query}%"))
+                )
                 .Select(r => new DTOs.SearchDto
                 {
                     RestId = r.RestId,
@@ -36,7 +40,11 @@ namespace Code_Curry.Controllers
                 .ToListAsync();
 
             var matchedFoods = await _context.Foods
-                .Where(f => f.Name.ToLower().Contains(query) || f.Description.ToLower().Contains(query) || f.Category.ToLower().Contains(query))
+                .Where(f =>
+                    EF.Functions.Like(f.Name.ToLower(), $"%{query}%") ||
+                    EF.Functions.Like(f.Description.ToLower(), $"%{query}%") ||
+                    EF.Functions.Like(f.Category.ToLower(), $"%{query}%")
+                )
                 .Select(f => new DTOs.FoodSearchDto
                 {
                     FoodId = f.FoodId,
@@ -57,6 +65,7 @@ namespace Code_Curry.Controllers
 
             return Ok(result);
         }
+
         [HttpGet("Foods")]
         public async Task<IActionResult> GetFoods([FromQuery] int restId, [FromQuery] string category = "none", [FromQuery] string sort = "none")
         {
@@ -113,7 +122,30 @@ namespace Code_Curry.Controllers
             var restaurants = await query.ToListAsync();
             return Ok(restaurants);
         }
+        [HttpGet("SearchByCuisine")]
+        public async Task<IActionResult> SearchByCuisine([FromQuery] string cuisine)
+        {
+            if (string.IsNullOrWhiteSpace(cuisine))
+                return BadRequest("Cuisine is required");
+
+            cuisine = cuisine.Trim().ToLower();
+
+            var matchedRestaurants = await _context.Restaurants
+                .Where(r => !string.IsNullOrEmpty(r.Cuisine) && r.Cuisine.ToLower().Contains(cuisine))
+                .Select(r => new DTOs.SearchDto
+                {
+                    RestId = r.RestId,
+                    Name = r.Name,
+                    Address = r.Address,
+                    Rating = r.Rating,
+                    RestStatus = r.RestStatus,
+                    RestImageUrl = r.RestImageUrl,
+                    Cuisine = r.Cuisine
+                })
+                .ToListAsync();
+
+            return Ok(matchedRestaurants);
+        }
 
     }
 }
-

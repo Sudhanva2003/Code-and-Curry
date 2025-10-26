@@ -20,6 +20,8 @@ namespace Code_Curry.DTOs
 
         [Required]
         public string RestStatus { get; set; }
+        public string RestImageUrl { get; set; }
+        public string Cuisine { get; set; }
     }
 
     public class FoodSearchDto
