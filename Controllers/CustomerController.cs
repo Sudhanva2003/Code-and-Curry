@@ -228,6 +228,7 @@ namespace Code_Curry.Controllers
                 .Select(o => new
                 {
                     orderId = o.OrderId,
+                    delivererId=o.DelivererId,
                     restId = o.RestId,
                     orderDate = o.OrderDate,
                     totalAmount = o.TotalAmount,

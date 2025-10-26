@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Code_Curry.Models;
 
@@ -30,6 +31,12 @@ public partial class Order
     public decimal Gst { get; set; }
 
     public decimal FinalPrice { get; set; }
+
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal? Rating { get; set; }
+
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal? DelivererRating { get; set; }
 
     public virtual User? Deliverer { get; set; }
 

@@ -20,6 +20,92 @@ namespace Code_Curry.Controllers
             _context = context;
         }
 
+        bool CanRateRestaurant(int userId, int restId)
+        {
+            return _context.Orders.Any(o => o.UserId == userId && o.RestId == restId && o.Status == "Delivered");
+        }
+
+        bool CanRateDeliverer(int userId, int delivererId)
+        {
+            return _context.Orders.Any(o => o.UserId == userId && o.DelivererId == delivererId && o.Status == "Delivered");
+        }
+
+        [HttpPost("SubmitRating")]
+        public async Task<IActionResult> SubmitRating(int userId, int orderId, decimal rating)
+        {
+            // Get the order that was delivered and belongs to the user.
+            var order = await _context.Orders.FirstOrDefaultAsync(o =>
+                o.OrderId == orderId && o.UserId == userId && o.Status == "Delivered");
+
+            if (order == null)
+                return BadRequest(new { message = "You can only rate completed orders." });
+
+            // Check if the user is eligible to rate the restaurant.
+            if (!CanRateRestaurant(userId, order.RestId))
+                return BadRequest(new { message = "You are not eligible to rate this restaurant." });
+
+            // Set the restaurant rating for this order.
+            order.Rating = rating;
+            await _context.SaveChangesAsync();
+
+            // Calculate the average rating for the restaurant after the new rating is added.
+            var restAvg = await _context.Orders
+                .Where(o => o.RestId == order.RestId && o.Status == "Delivered" && o.Rating != null)
+                .AverageAsync(o => o.Rating);
+
+            // Find the restaurant and update its average rating.
+            var restaurant = await _context.Restaurants.FindAsync(order.RestId);
+            if (restaurant != null)
+            {
+                // Update the restaurant's average rating, rounding to one decimal point.
+                restaurant.Rating = Math.Round(restAvg ?? 4.0m, 1);
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Restaurant rating submitted successfully" });
+        }
+
+        [HttpPost("SubmitDelivererRating")]
+        public async Task<IActionResult> SubmitDelivererRating(int userId, int delivererId, decimal rating)
+        {
+            if (!CanRateDeliverer(userId, delivererId))
+                return BadRequest(new { message = "You are not eligible to rate this deliverer." });
+
+            var deliverer = await _context.Users.FindAsync(delivererId);
+            if (deliverer == null || deliverer.Role != "Deliverer")
+                return BadRequest(new { message = "Deliverer not found or invalid role." });
+
+            var order = await _context.Orders
+                .Where(o => o.DelivererId == delivererId && o.UserId == userId && o.Status == "Delivered" && o.DelivererRating == null)
+                .OrderByDescending(o => o.OrderDate)
+                .FirstOrDefaultAsync();
+
+            if (order != null)
+            {
+                order.DelivererRating = rating;
+            }
+
+            // Get all orders for the deliverer where rating is not null
+            var ratedOrders = await _context.Orders
+                .Where(o => o.DelivererId == delivererId && o.Status == "Delivered" && o.DelivererRating != null)
+                .ToListAsync();
+
+            // Calculate the average rating for the deliverer
+            decimal delivererAvg = ratedOrders.Any()
+                ? Math.Round(ratedOrders.Average(o => o.DelivererRating.Value), 1)
+                : 4.0m;  // Default to 4.0 if no previous ratings
+
+            // Update the deliverer's overall rating
+            deliverer.Rating = delivererAvg;
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Deliverer rating submitted successfully",
+                updatedRating = deliverer.Rating
+            });
+        }
+
         [HttpPost("placeOrder")]
         public async Task<IActionResult> PlaceOrder([FromBody] PlaceOrderDto dto)
         {
