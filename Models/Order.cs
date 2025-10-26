@@ -14,6 +14,7 @@ public partial class Order
     public int UserId { get; set; }
 
     public int RestId { get; set; }
+    public DateTime DeliveryDate { get; set; }
 
     public int? DelivererId { get; set; }
 
@@ -42,6 +43,7 @@ public partial class Order
 
     public decimal? FinalPrice { get; set; }
 
+    public decimal? Rating { get; set; }
     [Column(TypeName = "money")]
     public decimal? GST { get; set; }
 
@@ -59,5 +61,5 @@ public partial class Order
     [ForeignKey("UserId")]
     [InverseProperty("OrderUsers")]
     public virtual User User { get; set; } = null!;
-    public DateTime? DeliveryDate { get; set; }
+
 }

@@ -176,6 +176,7 @@ namespace Code_Curry.Controllers
 
             return Ok(matchingFoods);
         }
+
         [HttpGet("SearchRestaurantsByFoodName")]
         public async Task<IActionResult> SearchRestaurantsByFoodName([FromQuery] string name)
         {
