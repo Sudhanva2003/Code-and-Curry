@@ -20,8 +20,6 @@ namespace Code_Curry.Controllers
             _context = context;
         }
 
-        // ✅ Eligibility checks
-
         bool CanRateRestaurant(int userId, int restId)
         {
             return _context.Orders.Any(o => o.UserId == userId && o.RestId == restId && o.Status == "Delivered");
@@ -35,31 +33,38 @@ namespace Code_Curry.Controllers
         [HttpPost("SubmitRating")]
         public async Task<IActionResult> SubmitRating(int userId, int orderId, decimal rating)
         {
+            // Get the order that was delivered and belongs to the user.
             var order = await _context.Orders.FirstOrDefaultAsync(o =>
                 o.OrderId == orderId && o.UserId == userId && o.Status == "Delivered");
 
             if (order == null)
                 return BadRequest(new { message = "You can only rate completed orders." });
 
+            // Check if the user is eligible to rate the restaurant.
             if (!CanRateRestaurant(userId, order.RestId))
                 return BadRequest(new { message = "You are not eligible to rate this restaurant." });
 
+            // Set the restaurant rating for this order.
             order.Rating = rating;
             await _context.SaveChangesAsync();
 
+            // Calculate the average rating for the restaurant after the new rating is added.
             var restAvg = await _context.Orders
                 .Where(o => o.RestId == order.RestId && o.Status == "Delivered" && o.Rating != null)
                 .AverageAsync(o => o.Rating);
 
+            // Find the restaurant and update its average rating.
             var restaurant = await _context.Restaurants.FindAsync(order.RestId);
             if (restaurant != null)
             {
+                // Update the restaurant's average rating, rounding to one decimal point.
                 restaurant.Rating = Math.Round(restAvg ?? 4.0m, 1);
             }
 
             await _context.SaveChangesAsync();
             return Ok(new { message = "Restaurant rating submitted successfully" });
         }
+
         [HttpPost("SubmitDelivererRating")]
         public async Task<IActionResult> SubmitDelivererRating(int userId, int delivererId, decimal rating)
         {
@@ -70,27 +75,28 @@ namespace Code_Curry.Controllers
             if (deliverer == null || deliverer.Role != "Deliverer")
                 return BadRequest(new { message = "Deliverer not found or invalid role." });
 
-            // ✅ Find one delivered order for this user and deliverer
             var order = await _context.Orders
-                .Where(o => o.DelivererId == delivererId && o.UserId == userId && o.Status == "Delivered" && o.Rating == null)
+                .Where(o => o.DelivererId == delivererId && o.UserId == userId && o.Status == "Delivered" && o.DelivererRating == null)
                 .OrderByDescending(o => o.OrderDate)
                 .FirstOrDefaultAsync();
 
             if (order != null)
             {
-                order.Rating = rating; // ✅ Save the new rating
+                order.DelivererRating = rating;
             }
 
-            // ✅ Recalculate average from all rated orders
+            // Get all orders for the deliverer where rating is not null
             var ratedOrders = await _context.Orders
-                .Where(o => o.DelivererId == delivererId && o.Status == "Delivered" && o.Rating != null)
+                .Where(o => o.DelivererId == delivererId && o.Status == "Delivered" && o.DelivererRating != null)
                 .ToListAsync();
 
-            decimal average = ratedOrders.Any()
-                ? Math.Round(ratedOrders.Average(o => o.Rating.Value), 1)
-                : Math.Round(rating, 1);
+            // Calculate the average rating for the deliverer
+            decimal delivererAvg = ratedOrders.Any()
+                ? Math.Round(ratedOrders.Average(o => o.DelivererRating.Value), 1)
+                : 4.0m;  // Default to 4.0 if no previous ratings
 
-            deliverer.Rating = average;
+            // Update the deliverer's overall rating
+            deliverer.Rating = delivererAvg;
             await _context.SaveChangesAsync();
 
             return Ok(new
@@ -103,8 +109,6 @@ namespace Code_Curry.Controllers
 
 
 
-
-        // ✅ Place order
         [HttpPost("placeOrder")]
         public async Task<IActionResult> PlaceOrder([FromBody] PlaceOrderDto dto)
         {
@@ -180,7 +184,6 @@ namespace Code_Curry.Controllers
             return Ok(generatedBills);
         }
 
-        // ✅ Restaurant orders
         [HttpGet("RestaurantOrders")]
         public async Task<IActionResult> GetRestaurantOrders(
             [FromQuery] int restId,
@@ -234,7 +237,6 @@ namespace Code_Curry.Controllers
             });
         }
 
-        // ✅ Customer orders (with DelivererId added)
         [HttpGet("CustomerOrders")]
         public async Task<IActionResult> GetCustomerOrders(
             [FromQuery] int customerId,
@@ -266,7 +268,7 @@ namespace Code_Curry.Controllers
                     o.OrderId,
                     o.UserId,
                     o.RestId,
-                    o.DelivererId, // ✅ Added
+                    o.DelivererId,
                     o.OrderDate,
                     o.TotalAmount,
                     Items = o.OrderDetails.Select(od => new
