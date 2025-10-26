@@ -74,6 +74,7 @@ namespace Code_Curry.Controllers
             restaurant.Name = dto.Name;
             restaurant.Address = dto.Address;
             restaurant.Phone = dto.Phone;
+            restaurant.RestStatus = dto.RestStatus;  // Resolved conflict here
 
             if (!string.IsNullOrWhiteSpace(dto.RestImageUrl))
                 restaurant.RestImageUrl = dto.RestImageUrl;
@@ -86,7 +87,8 @@ namespace Code_Curry.Controllers
             return Ok(new
             {
                 message = "Restaurant updated successfully",
-                restaurant.RestImageUrl,
+                restaurant.RestStatus,  // Resolved conflict here
+                restaurant.RestImageUrl
             });
         }
 
@@ -194,7 +196,7 @@ namespace Code_Curry.Controllers
         public async Task<IActionResult> ViewRestaurantPastOrders(int RestId)
         {
             var orders = await _context.Orders
-                .Where(o => o.RestId == RestId && o.Status == "Prepared")
+                .Where(o => o.RestId == RestId && o.Status == "Prepared" || o.Status == "Delivered")
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Food)
                 .OrderByDescending(o => o.OrderDate)

@@ -222,7 +222,7 @@ namespace Code_Curry.Controllers
 
             // Past Orders (status = Prepared)
             var pastOrders = orders
-                .Where(o => o.Status == "Prepared")
+                .Where(o => o.Status == "Prepared"|| o.Status=="Delivered")
                 .OrderByDescending(o => o.OrderDate)
                 .Select(o => new
                 {
