@@ -58,6 +58,7 @@ namespace Code_Curry.Controllers
             });
         }
 
+
         [HttpPost("login")]
 
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
@@ -318,6 +319,42 @@ namespace Code_Curry.Controllers
             return Ok(new { message = "User deleted successfully (soft deleted)" });
         }
 
+        [HttpPost("registerAdmin")]
+        public async Task<IActionResult> RegisterAdmin([FromBody] AdminCreateDto dto)
+        {
+            // async check if email exists
+            bool emailExists = await _context.Users.AnyAsync(u => u.Email == dto.Email);
+            bool RestaurantEmailExists = await _context.Restaurants.AnyAsync(u => u.Email == dto.Email);
+            if (emailExists || RestaurantEmailExists)
+            {
+                return Conflict("Email already exists."); // 409 Conflict
+            }
+
+            // hash password
+            var hashedPassword = HashPassword(dto.Password); // Assuming HashPassword is implemented to hash the password
+
+            // map DTO to EF entity
+            var user = new User
+            {
+                FullName = dto.FullName,
+                Email = dto.Email,
+                Phone = dto.Phone,
+                PasswordHash = hashedPassword, // Store the hashed password
+                Role = "Admin"
+            };
+
+            await _context.Users.AddAsync(user);           // async add
+            await _context.SaveChangesAsync();             // async save
+
+            // return minimal info, do not return password
+            return Ok(new
+            {
+                user.UserId,
+                user.FullName,
+                user.Email,
+                user.Role
+            });
+        }
 
 
         private string HashPassword(string password)
