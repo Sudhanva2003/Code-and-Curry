@@ -1,6 +1,7 @@
 ﻿using Code_Curry.Models;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Code_Curry.Controllers
 {
@@ -15,6 +16,8 @@ namespace Code_Curry.Controllers
         {
             _context = context;
         }
+
+        [Authorize(Roles = "Admin,Customer")]
         [HttpGet("search")]
         public async Task<IActionResult> SearchAll([FromQuery] string query)
         {
@@ -65,7 +68,7 @@ namespace Code_Curry.Controllers
 
             return Ok(result);
         }
-
+        [Authorize(Roles = "Admin,Customer")]
         [HttpGet("Foods")]
         public async Task<IActionResult> GetFoods([FromQuery] int restId, [FromQuery] string category = "none", [FromQuery] string sort = "none")
         {
@@ -100,6 +103,7 @@ namespace Code_Curry.Controllers
         }
 
         // GET: api/Filter/Restaurants?sort=rating
+        [Authorize(Roles = "Admin,Customer")]
         [HttpGet("Restaurants")]
         public async Task<IActionResult> GetRestaurants([FromQuery] string sort = "rating")
         {
@@ -122,6 +126,7 @@ namespace Code_Curry.Controllers
             var restaurants = await query.ToListAsync();
             return Ok(restaurants);
         }
+        [Authorize(Roles = "Admin,Customer")]
         [HttpGet("SearchByCuisine")]
         public async Task<IActionResult> SearchByCuisine([FromQuery] string cuisine)
         {

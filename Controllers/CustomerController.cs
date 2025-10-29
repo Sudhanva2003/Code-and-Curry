@@ -1,10 +1,11 @@
-﻿using Code_Curry.Models;
+﻿using Code_Curry.DTOs;
+using Code_Curry.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore; // required for AnyAsync
+using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages.Manage;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.EntityFrameworkCore; // required for AnyAsync
-using Code_Curry.DTOs;
-using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages.Manage;
 
 namespace Code_Curry.Controllers
 {
@@ -19,6 +20,7 @@ namespace Code_Curry.Controllers
             _context = context;
         }
 
+        [AllowAnonymous]
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] CustomerCreateDto dto)
         {
@@ -59,84 +61,9 @@ namespace Code_Curry.Controllers
         }
 
 
-        [HttpPost("login")]
-
-        public async Task<IActionResult> Login([FromBody] LoginDto dto)
-        {
-            if (dto == null || string.IsNullOrEmpty(dto.Email) || string.IsNullOrEmpty(dto.Password))
-                return BadRequest("Email and password are required.");
-
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email && u.Role=="Customer"&&u.UserStatus != "Deleted");
-            var restaurant = await _context.Restaurants.FirstOrDefaultAsync(r => r.Email == dto.Email && r.RestStatus != "Deleted");
-            var deliverer = await _context.Users.FirstOrDefaultAsync(d => d.Email == dto.Email && d.Role=="Deliverer"&& d.UserStatus != "Deleted");
-            var admin = await _context.Users.FirstOrDefaultAsync(a => a.Email == dto.Email && a.Role == "Admin" && a.UserStatus != "Deleted");
-
-            if (user == null && restaurant == null && deliverer == null && admin == null)
-                return Unauthorized("Email not found.");
-
-            string hashedPassword = HashPassword(dto.Password);
-
-            if (user != null)
-            {
-                if (user.PasswordHash != hashedPassword)
-                    return Unauthorized("Invalid password.");
-
-                return Ok(new LoginResponseDto
-                {
-                    Email = dto.Email,
-                    UserId = user.UserId,
-                    Role = "customer",
-                    Name = user.FullName
-                });
-            }
-
-            if (restaurant != null)
-            {
-                if (restaurant.PasswordHash != hashedPassword)
-                    return Unauthorized("Invalid password.");
-
-                return Ok(new LoginResponseDto
-                {
-                    Email = dto.Email,
-                    UserId = restaurant.RestId,
-                    Role = "restaurant",
-                    Name = restaurant.Name
-                });
-            }
-
-            if (deliverer != null)
-            {
-                if (deliverer.PasswordHash != hashedPassword)
-                    return Unauthorized("Invalid password.");
-
-                return Ok(new LoginResponseDto
-                {
-                    Email = dto.Email,
-                    UserId = deliverer.UserId,
-                    Role = "deliverer",
-                    Name = deliverer.FullName
-                });
-            }
-
-            if (admin != null)
-            {
-                if (admin.PasswordHash != hashedPassword)
-                    return Unauthorized("Invalid password.");
-
-                return Ok(new LoginResponseDto
-                {
-                    Email = dto.Email,
-                    UserId = admin.UserId,
-                    Role = "admin",
-                    Name = admin.FullName
-                });
-            }
-
-            return Unauthorized("Login failed.");
-        }
 
 
-
+        [Authorize(Roles = "Admin,Customer")]
         [HttpGet("ViewUser/{UserId}")]
 
         public async Task<IActionResult> ViewUser(int UserId)
@@ -158,6 +85,7 @@ namespace Code_Curry.Controllers
             return Ok(dto);
         }
 
+        [Authorize(Roles = "Admin,Customer")]
         [HttpPut("EditUserDetails/{UserId}")]
         public async Task<IActionResult> EditUserDetails(int UserId,[FromBody] CustomerEditDto newUser)
         {
@@ -188,6 +116,7 @@ namespace Code_Curry.Controllers
 
         }
 
+        [Authorize(Roles = "Admin,Customer")]
         [HttpGet("ViewUserOrders/{UserId}")]
         public async Task<IActionResult> ViewOrders(int UserId)
         {
@@ -251,7 +180,7 @@ namespace Code_Curry.Controllers
             return Ok(result);
         }
 
-
+        [Authorize(Roles = "Admin,Customer")]
         [HttpGet("ViewCart/{UserId}")]
         public async Task<IActionResult> ViewCart(int UserId)
         {
@@ -283,6 +212,7 @@ namespace Code_Curry.Controllers
             return Ok(result);
         }
 
+        [Authorize(Roles = "Admin,Customer")]
         [HttpPost("Checkout/{orderId}")]
         public async Task<IActionResult> Checkout(int orderId)
         {
@@ -305,7 +235,8 @@ namespace Code_Curry.Controllers
                 totalAmount = order.TotalAmount
             });
         }
-       
+
+        [Authorize(Roles = "Admin,Customer")]
         [HttpDelete("DeleteUser/{UserId}")]
         public async Task<IActionResult> DeleteUser(int UserId)
         {
@@ -320,6 +251,7 @@ namespace Code_Curry.Controllers
             return Ok(new { message = "User deleted successfully (soft deleted)" });
         }
 
+        [Authorize(Roles = "Admin,Customer")]
         [HttpPost("registerAdmin")]
         public async Task<IActionResult> RegisterAdmin([FromBody] AdminCreateDto dto)
         {

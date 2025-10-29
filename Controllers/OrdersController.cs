@@ -1,5 +1,6 @@
 ﻿using Code_Curry.DTOs;
 using Code_Curry.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -30,6 +31,7 @@ namespace Code_Curry.Controllers
             return _context.Orders.Any(o => o.UserId == userId && o.DelivererId == delivererId && o.Status == "Delivered");
         }
 
+        [Authorize(Roles = "Admin,Customer")]
         [HttpPost("SubmitRating")]
         public async Task<IActionResult> SubmitRating(int userId, int orderId, decimal rating)
         {
@@ -65,6 +67,7 @@ namespace Code_Curry.Controllers
             return Ok(new { message = "Restaurant rating submitted successfully" });
         }
 
+        [Authorize(Roles = "Admin,Customer")]
         [HttpPost("SubmitDelivererRating")]
         public async Task<IActionResult> SubmitDelivererRating(int userId, int delivererId, decimal rating)
         {
@@ -106,6 +109,7 @@ namespace Code_Curry.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin,Customer")]
         [HttpPost("placeOrder")]
         public async Task<IActionResult> PlaceOrder([FromBody] PlaceOrderDto dto)
         {
@@ -183,6 +187,7 @@ namespace Code_Curry.Controllers
             return Ok(generatedBills);
         }
         // GET: api/Orders/RestaurantOrders?restId=1&page=1&pageSize=10&month=10
+        [Authorize(Roles = "Admin,Restaurant")]
         [HttpGet("RestaurantOrders")]
         public async Task<IActionResult> GetRestaurantOrders(
             [FromQuery] int restId,
@@ -236,6 +241,7 @@ namespace Code_Curry.Controllers
             });
         }
         // GET: api/Orders/CustomerOrders?customerId=1&page=1&pageSize=10&month=10
+        [Authorize(Roles = "Admin,Customer")]
         [HttpGet("CustomerOrders")]
         public async Task<IActionResult> GetCustomerOrders(
             [FromQuery] int customerId,

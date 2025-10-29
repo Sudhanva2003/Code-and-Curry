@@ -1,6 +1,7 @@
 ﻿using Code_Curry.DTOs;
 using Code_Curry.Models;
 using Humanizer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
@@ -21,6 +22,7 @@ namespace Code_Curry.Controllers
             _context = context;
         }
 
+        [AllowAnonymous]
         [HttpPost("DelivererRegister")]
         public async Task<IActionResult> DelivererRegister([FromBody] DelivererDto request)
         {
@@ -53,7 +55,7 @@ namespace Code_Curry.Controllers
 
             return Ok(new { message = "Deliverer registered successfully", delivererId = deliverer.UserId });
         }
-
+        [Authorize(Roles = "Admin,Deliverer")]
         [HttpGet("ViewLiveOrders")]
         public async Task<IActionResult> ViewLiveOrders()
         {
@@ -76,6 +78,7 @@ namespace Code_Curry.Controllers
             return Ok(liveOrders);
         }
 
+        [Authorize(Roles = "Admin,Deliverer")]
         [HttpPut("AssignOrder/{orderId}")]
         public async Task<IActionResult> AssignOrder(int orderId, [FromBody] AssignOrderRequest request)
         {
@@ -98,6 +101,7 @@ namespace Code_Curry.Controllers
             return Ok("Order assigned successfully.");
         }
 
+        [Authorize(Roles = "Admin,Deliverer")]
         [HttpGet("DeliveryDetail/{orderId}")]
         public async Task<IActionResult> DeliveryDetail(int orderId)
         {
@@ -127,6 +131,7 @@ namespace Code_Curry.Controllers
             return Ok(result);
         }
 
+        [Authorize(Roles = "Admin,Deliverer")]
         [HttpPut("MarkDelivered/{orderId}")]
         public async Task<IActionResult> MarkDelivered(int orderId)
         {
@@ -161,6 +166,7 @@ namespace Code_Curry.Controllers
             return Ok(orders);
         }
 
+        [Authorize(Roles = "Admin,Deliverer")]
         [HttpGet("DelivererProfile/{delivererId}")]
         public async Task<IActionResult> DelivererProfile(int delivererId)
         {
@@ -185,6 +191,7 @@ namespace Code_Curry.Controllers
             return Ok(deliverer);
         }
 
+        [Authorize(Roles = "Admin,Deliverer")]
         [HttpPut("EditDeliverer/{delivererId}")]
         public async Task<IActionResult> EditDeliverer(int delivererId, [FromBody] EditDelivererDto dto)
         {
@@ -201,6 +208,7 @@ namespace Code_Curry.Controllers
             return Ok("Deliverer details updated successfully.");
         }
 
+        [Authorize(Roles = "Admin,Deliverer")]
         [HttpDelete("DeleteDeliverer/{delivererId}")]
         public async Task<IActionResult> DeleteDeliverer(int delivererId)
         {

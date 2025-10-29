@@ -1,6 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Code_Curry.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Code_Curry.Models;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -18,6 +19,7 @@ namespace Code_Curry.Controllers
         }
 
         // 1) Raise Restaurant Ticket
+        [Authorize(Roles = "Admin,Restaurant")]
         [HttpPost("raiseRestaurantTicket")]
         public async Task<ActionResult<TicketDto>> RaiseRestaurantTicket([FromBody] RaiseTicketDto dto)
         {
@@ -47,6 +49,7 @@ namespace Code_Curry.Controllers
         }
 
         // 2) Raise User Ticket
+        [Authorize(Roles = "Admin,Customer,Deliverer")]
         [HttpPost("raiseUserTicket")]
         public async Task<ActionResult<TicketDto>> RaiseUserTicket([FromBody] RaiseTicketDto dto)
         {
@@ -76,6 +79,7 @@ namespace Code_Curry.Controllers
             };
             return Ok(response);
         }
+        [Authorize(Roles = "Admin")]
 
         // 3) View Open Tickets
         [HttpGet("viewOpenTickets/{userId}")]
@@ -104,6 +108,7 @@ namespace Code_Curry.Controllers
         }
 
         // 4) Assign Ticket
+        [Authorize(Roles = "Admin")]
         [HttpPost("assignTicket")]
         public async Task<IActionResult> AssignTicket([FromQuery] int ticketId, [FromQuery] int userId)
         {
@@ -118,6 +123,7 @@ namespace Code_Curry.Controllers
         }
 
         // 5) Resolve Ticket
+        [Authorize(Roles = "Admin")]
         [HttpPost("resolveTicket")]
         public async Task<IActionResult> ResolveTicket([FromBody] ResolveTicketDto dto)
         {
@@ -148,6 +154,7 @@ namespace Code_Curry.Controllers
         }
 
         // 6) View Closed Tickets
+        [Authorize(Roles = "Admin")]
         [HttpGet("viewClosedTickets/{userId}")]
         public async Task<ActionResult<IEnumerable<TicketDto>>> ViewClosedTickets(int userId)
         {
@@ -172,7 +179,7 @@ namespace Code_Curry.Controllers
 
             return Ok(result);
         }
-
+        [Authorize(Roles = "Admin,Restaurant")]
         // 7) View My Restaurant Tickets
         [HttpGet("viewMyRestTickets/{restId}")]
         public async Task<ActionResult<IEnumerable<TicketDto>>> ViewMyRestTickets(int restId)

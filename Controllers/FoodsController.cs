@@ -1,6 +1,7 @@
 ﻿using Code_Curry.Dtos;
 using Code_Curry.DTOs;
 using Code_Curry.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
@@ -18,6 +19,7 @@ namespace Code_Curry.Controllers
         {
             _context = context;
         }
+        [Authorize(Roles = "Admin,Restaurant")]
 
         [HttpPost("AddFood")]
         public async Task<ActionResult<FoodResponseDto>> AddFood([FromBody] FoodCreateDto dto)
@@ -57,7 +59,7 @@ namespace Code_Curry.Controllers
 
             return CreatedAtAction(nameof(GetFood), new { FoodId = food.FoodId }, foodDto);
         }
-
+        [Authorize(Roles = "Admin,Restaurant")]
         [HttpGet("GetFood/{FoodId}")]
         public async Task<ActionResult<FoodResponseDto>> GetFood(int FoodId)
         {
@@ -80,7 +82,7 @@ namespace Code_Curry.Controllers
                 RestaurantName = food.Rest.Name
             };
         }
-
+        [Authorize(Roles = "Admin,Restaurant")]
         [HttpPut("UpdateFood/{FoodId}")]
         public async Task<IActionResult> UpdateFood(int FoodId, [FromBody] FoodUpdateDto dto)
         {
@@ -99,7 +101,7 @@ namespace Code_Curry.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-
+        [Authorize(Roles = "Admin,Restaurant")]
         [HttpDelete("DeleteFood/{id}")]
         public async Task<IActionResult> DeleteFood(int id)
         {
@@ -112,7 +114,7 @@ namespace Code_Curry.Controllers
 
             return Ok(new { message = "Food marked as deleted" });
         }
-
+        [Authorize(Roles = "Admin,Restaurant")]
         [HttpPatch("ChangeAvailability/{FoodId}")]
         public async Task<IActionResult> SetAvailability(int FoodId, [FromBody] FoodAvailabilityDto dto)
         {
@@ -123,7 +125,7 @@ namespace Code_Curry.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-
+        [Authorize(Roles = "Admin,Restaurant")]
         [HttpGet("GetRestaurantFoods/{RestId}")]
         public async Task<IActionResult> GetRestaurantFoods(int RestId)
         {
@@ -151,6 +153,7 @@ namespace Code_Curry.Controllers
 
             return Ok(foods);
         }
+        [Authorize(Roles = "Admin,Restaurant")]
         [HttpGet("Search")]
         public async Task<IActionResult> SearchFoods([FromQuery] string name)
         {
@@ -176,7 +179,7 @@ namespace Code_Curry.Controllers
 
             return Ok(matchingFoods);
         }
-
+        [Authorize(Roles = "Admin,Restaurant")]
         [HttpGet("SearchRestaurantsByFoodName")]
         public async Task<IActionResult> SearchRestaurantsByFoodName([FromQuery] string name)
         {

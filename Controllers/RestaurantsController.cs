@@ -1,5 +1,6 @@
 using Code_Curry.DTOs;
 using Code_Curry.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
@@ -18,17 +19,15 @@ namespace Code_Curry.Controllers
             _context = context;
         }
 
-        // Register a new restaurant
+        [AllowAnonymous]
         [HttpPost("RegisterRestaurant")]
         public async Task<IActionResult> RegisterRestaurant([FromBody] RestaurantDto dto)
         {
-            // Check if email exists in Restaurants or Users table
             bool emailExists = await _context.Restaurants.AnyAsync(r => r.Email == dto.Email);
             bool userEmailExists = await _context.Users.AnyAsync(u => u.Email == dto.Email);
             if (emailExists || userEmailExists)
-                return Conflict("Email already exists."); // 409 Conflict
+                return Conflict("Email already exists.");
 
-            // Hash the password
             var hashedPassword = HashPassword(dto.Password);
 
             var restaurant = new Restaurant
@@ -37,12 +36,11 @@ namespace Code_Curry.Controllers
                 Address = dto.Address,
                 Email = dto.Email,
                 Phone = dto.Phone,
-                Cuisine=dto.Cuisine,
+                Cuisine = dto.Cuisine,
                 PasswordHash = hashedPassword,
                 GstNo = dto.GstNo,
                 FssaiNo = dto.FssaiNo,
                 RestStatus = dto.RestStatus,
-
                 RestImageUrl = string.IsNullOrWhiteSpace(dto.RestImageUrl)
                     ? "https://t3.ftcdn.net/jpg/03/24/73/92/360_F_324739203_keeq8udvv0P2h1MLYJ0GLSlTBagoXS48.jpg"
                     : dto.RestImageUrl
@@ -64,7 +62,7 @@ namespace Code_Curry.Controllers
             });
         }
 
-        // Edit restaurant details
+        [Authorize(Roles = "Admin,Restaurant")]
         [HttpPut("EditRestaurant/{RestId}")]
         public async Task<IActionResult> EditRestaurant(int RestId, [FromBody] RestaurantEditDto dto)
         {
@@ -75,7 +73,6 @@ namespace Code_Curry.Controllers
             restaurant.Address = dto.Address;
             restaurant.Phone = dto.Phone;
             restaurant.RestStatus = dto.RestStatus;
-          
 
             if (!string.IsNullOrWhiteSpace(dto.RestImageUrl))
                 restaurant.RestImageUrl = dto.RestImageUrl;
@@ -85,15 +82,10 @@ namespace Code_Curry.Controllers
 
             await _context.SaveChangesAsync();
 
-            return Ok(new
-            {
-                message = "Restaurant updated successfully",
-                restaurant.RestStatus
-               
-            });
+            return Ok(new { message = "Restaurant updated successfully", restaurant.RestStatus });
         }
 
-        // View restaurant profile
+        [Authorize(Roles = "Admin,Restaurant")]
         [HttpGet("ViewRestaurant/{RestId}")]
         public async Task<IActionResult> ViewRestaurant(int RestId)
         {
@@ -116,7 +108,7 @@ namespace Code_Curry.Controllers
             return Ok(restaurantDetails);
         }
 
-        // Get restaurant menu
+        [Authorize(Roles = "Admin,Restaurant")]
         [HttpGet("Menu/{RestId}")]
         public async Task<IActionResult> ViewMenu(int RestId)
         {
@@ -126,9 +118,8 @@ namespace Code_Curry.Controllers
 
             if (restaurant == null) return NotFound("Restaurant not found");
 
-            // Only include foods that are not deleted
             var menu = restaurant.Foods
-                .Where(f => f.FoodStatus != "Deleted")   // <-- filter out deleted
+                .Where(f => f.FoodStatus != "Deleted")
                 .Select(f => new MenuItemDto
                 {
                     FoodId = f.FoodId,
@@ -144,8 +135,7 @@ namespace Code_Curry.Controllers
             return Ok(menu);
         }
 
-
-        // Get restaurants by rating (Home page)
+        [Authorize(Roles = "Admin,Restaurant")]
         [HttpGet("Home")]
         public async Task<IActionResult> GetRestaurantsByRating()
         {
@@ -165,12 +155,12 @@ namespace Code_Curry.Controllers
             return Ok(restaurants);
         }
 
-        // View restaurant open orders
+        [Authorize(Roles = "Admin,Restaurant")]
         [HttpGet("ViewRestaurantOpenOrders/{RestId}")]
         public async Task<IActionResult> ViewRestaurantOpenOrders(int RestId)
         {
             var orders = await _context.Orders
-                .Where(o => o.RestId == RestId && o.Status == "Paid"&& o.User.UserStatus == "Active")
+                .Where(o => o.RestId == RestId && o.Status == "Paid" && o.User.UserStatus == "Active")
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Food)
                 .OrderByDescending(o => o.OrderDate)
@@ -192,12 +182,12 @@ namespace Code_Curry.Controllers
             return Ok(orders);
         }
 
-        // View restaurant past orders
+        [Authorize(Roles = "Admin,Restaurant")]
         [HttpGet("ViewRestaurantPastOrders/{RestId}")]
         public async Task<IActionResult> ViewRestaurantPastOrders(int RestId)
         {
             var orders = await _context.Orders
-                .Where(o => o.RestId == RestId && o.Status == "Prepared"||o.Status=="Delivered")
+                .Where(o => o.RestId == RestId && (o.Status == "Prepared" || o.Status == "Delivered"))
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Food)
                 .OrderByDescending(o => o.OrderDate)
@@ -210,7 +200,7 @@ namespace Code_Curry.Controllers
                     o.Discount,
                     o.HandlingFee,
                     o.Gst,
-                    FinalPrice = o.TotalAmount - o.Discount + o.Gst+o.HandlingFee,
+                    FinalPrice = o.TotalAmount - o.Discount + o.Gst + o.HandlingFee,
                     Items = o.OrderDetails.Select(od => new
                     {
                         od.Food.Name,
@@ -222,6 +212,8 @@ namespace Code_Curry.Controllers
 
             return Ok(orders);
         }
+
+        [Authorize(Roles = "Admin,Restaurant")]
         [HttpGet("Search")]
         public async Task<IActionResult> SearchRestaurants([FromQuery] string name)
         {
@@ -229,14 +221,12 @@ namespace Code_Curry.Controllers
                 return BadRequest("Search term is required.");
 
             var matchingRestaurants = await _context.Restaurants
-                .Where(r => r.Name.Contains(name)) // case-sensitive
-                                                   //.Where(r => EF.Functions.Like(r.Name, $"%{name}%")) // case-insensitive for SQL Server
+                .Where(r => r.Name.Contains(name))
                 .Select(r => new RestaurantSummaryDto
                 {
                     RestId = r.RestId,
                     Name = r.Name,
                     Rating = r.Rating,
-                    //IsOpen = r.IsOpen,
                     RestImageUrl = r.RestImageUrl
                 })
                 .ToListAsync();
@@ -244,7 +234,7 @@ namespace Code_Curry.Controllers
             return Ok(matchingRestaurants);
         }
 
-
+        [Authorize(Roles = "Admin,Restaurant")]
         [HttpPut("Prepared/{orderId}")]
         public async Task<IActionResult> MarkOrderPrepared(int orderId)
         {
@@ -256,6 +246,7 @@ namespace Code_Curry.Controllers
             return Ok("Order marked as prepared");
         }
 
+        [Authorize(Roles = "Admin,Restaurant")]
         [HttpPatch("SetRestaurantStatus/{RestId}")]
         public async Task<IActionResult> SetRestaurantStatus(int RestId, [FromQuery] string action)
         {
@@ -272,8 +263,7 @@ namespace Code_Curry.Controllers
             return Ok(new { message = $"Restaurant is now {restaurant.RestStatus}.", restaurant.RestStatus });
         }
 
-
-        // Delete restaurant (soft delete)
+        [Authorize(Roles = "Admin,Restaurant")]
         [HttpDelete("DeleteRestaurant/{RestId}")]
         public async Task<IActionResult> DeleteRestaurant(int RestId)
         {
@@ -287,7 +277,6 @@ namespace Code_Curry.Controllers
             return Ok(new { message = "Restaurant marked as deleted" });
         }
 
-        // Helper method to hash passwords
         private string HashPassword(string password)
         {
             using var sha256 = SHA256.Create();
