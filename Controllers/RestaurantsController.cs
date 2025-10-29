@@ -135,7 +135,7 @@ namespace Code_Curry.Controllers
             return Ok(menu);
         }
 
-        [Authorize(Roles = "Admin,Restaurant")]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpGet("Home")]
         public async Task<IActionResult> GetRestaurantsByRating()
         {
@@ -213,7 +213,7 @@ namespace Code_Curry.Controllers
             return Ok(orders);
         }
 
-        [Authorize(Roles = "Admin,Restaurant")]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpGet("Search")]
         public async Task<IActionResult> SearchRestaurants([FromQuery] string name)
         {

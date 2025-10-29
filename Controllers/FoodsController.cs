@@ -179,7 +179,7 @@ namespace Code_Curry.Controllers
 
             return Ok(matchingFoods);
         }
-        [Authorize(Roles = "Admin,Restaurant")]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpGet("SearchRestaurantsByFoodName")]
         public async Task<IActionResult> SearchRestaurantsByFoodName([FromQuery] string name)
         {
