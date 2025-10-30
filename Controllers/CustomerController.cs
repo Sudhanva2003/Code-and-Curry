@@ -25,7 +25,7 @@ namespace Code_Curry.Controllers
             // async check if email exists
             bool emailExists = await _context.Users.AnyAsync(u => u.Email == dto.Email);
             bool RestaurantEmailExists = await _context.Restaurants.AnyAsync(u => u.Email == dto.Email);
-            if (emailExists||RestaurantEmailExists)
+            if (emailExists || RestaurantEmailExists)
             {
                 return Conflict("Email already exists."); // 409 Conflict
             }
@@ -66,9 +66,9 @@ namespace Code_Curry.Controllers
             if (dto == null || string.IsNullOrEmpty(dto.Email) || string.IsNullOrEmpty(dto.Password))
                 return BadRequest("Email and password are required.");
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email && u.Role=="Customer"&&u.UserStatus != "Deleted");
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email && u.Role == "Customer" && u.UserStatus != "Deleted");
             var restaurant = await _context.Restaurants.FirstOrDefaultAsync(r => r.Email == dto.Email && r.RestStatus != "Deleted");
-            var deliverer = await _context.Users.FirstOrDefaultAsync(d => d.Email == dto.Email && d.Role=="Deliverer"&& d.UserStatus != "Deleted");
+            var deliverer = await _context.Users.FirstOrDefaultAsync(d => d.Email == dto.Email && d.Role == "Deliverer" && d.UserStatus != "Deleted");
             var admin = await _context.Users.FirstOrDefaultAsync(a => a.Email == dto.Email && a.Role == "Admin" && a.UserStatus != "Deleted");
 
             if (user == null && restaurant == null && deliverer == null && admin == null)
@@ -141,7 +141,7 @@ namespace Code_Curry.Controllers
 
         public async Task<IActionResult> ViewUser(int UserId)
         {
-            var user=await _context.Users.FindAsync(UserId);
+            var user = await _context.Users.FindAsync(UserId);
             if (user == null)
             {
                 return NotFound();
@@ -152,17 +152,17 @@ namespace Code_Curry.Controllers
                 Email = user.Email,
                 Phone = user.Phone,
                 Address = user.Address,
-                Role=user.Role
+                Role = user.Role
             };
 
             return Ok(dto);
         }
 
         [HttpPut("EditUserDetails/{UserId}")]
-        public async Task<IActionResult> EditUserDetails(int UserId,[FromBody] CustomerEditDto newUser)
+        public async Task<IActionResult> EditUserDetails(int UserId, [FromBody] CustomerEditDto newUser)
         {
             var oldUser = await _context.Users.FindAsync(UserId);
-            if (oldUser==null)
+            if (oldUser == null)
             {
                 return BadRequest("User not found");
             }
@@ -173,7 +173,7 @@ namespace Code_Curry.Controllers
             oldUser.FullName = newUser.FullName;
             oldUser.Phone = newUser.Phone;
             oldUser.Address = newUser.Address;
- 
+
 
             await _context.SaveChangesAsync();
 
@@ -191,7 +191,6 @@ namespace Code_Curry.Controllers
         [HttpGet("ViewUserOrders/{UserId}")]
         public async Task<IActionResult> ViewOrders(int UserId)
         {
-            // Fetch all orders for this user including details and food
             var orders = await _context.Orders
                 .Where(o => o.UserId == UserId)
                 .Include(o => o.OrderDetails)
@@ -201,9 +200,9 @@ namespace Code_Curry.Controllers
             if (!orders.Any())
                 return NotFound("No orders found for this user.");
 
-            // Open Orders (status = Paid)
             var openOrders = orders
-                .Where(o => o.Status == "Paid")
+    .Where(o => o.Status == "Paid" || o.Status == "Prepared" 
+    || o.Status=="Assigned")
                 .OrderByDescending(o => o.OrderDate)
                 .Select(o => new
                 {
@@ -221,35 +220,34 @@ namespace Code_Curry.Controllers
                     })
                 }).ToList();
 
-            // Past Orders (status = Prepared)
             var pastOrders = orders
-                .Where(o => o.Status == "Prepared"|| o.Status=="Delivered")
-                .OrderByDescending(o => o.OrderDate)
-                .Select(o => new
-                {
-                    orderId = o.OrderId,
-                    delivererId=o.DelivererId,
-                    restId = o.RestId,
-                    orderDate = o.OrderDate,
-                    totalAmount = o.TotalAmount,
-                    status = o.Status,
-                    items = o.OrderDetails.Select(d => new
-                    {
-                        foodId = d.FoodId,
-                        foodName = d.Food.Name,
-                        quantity = d.Quantity,
-                        price = d.Price
-                    })
-                }).ToList();
+      .Where(o => o.Status == "Delivered"
+         || o.Status == "Prepared"
+         || o.Status == "CancelledByCustomer"
+         || o.Status == "CancelledByRest"
+         || o.Status == "CancelledByDeliverer")
+  .OrderByDescending(o => o.OrderDate)
+.Select(o => new
+{
+    orderId = o.OrderId,
+    delivererId = o.DelivererId,
+    restId = o.RestId,
+    orderDate = o.OrderDate,
+    totalAmount = o.TotalAmount,
+    status = o.Status,
+    items = o.OrderDetails.Select(d => new
+    {
+        foodId = d.FoodId,
+        foodName = d.Food.Name,
+        quantity = d.Quantity,
+        price = d.Price
+    })
+}).ToList();
 
-            var result = new
-            {
-                openOrders,
-                pastOrders
-            };
 
-            return Ok(result);
+            return Ok(new { openOrders, pastOrders });
         }
+
 
 
         [HttpGet("ViewCart/{UserId}")]
@@ -305,7 +303,7 @@ namespace Code_Curry.Controllers
                 totalAmount = order.TotalAmount
             });
         }
-       
+
         [HttpDelete("DeleteUser/{UserId}")]
         public async Task<IActionResult> DeleteUser(int UserId)
         {
@@ -364,5 +362,26 @@ namespace Code_Curry.Controllers
             var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
             return Convert.ToBase64String(bytes);
         }
+        [HttpPut("CancelOrder/{orderId}")]
+        public async Task<IActionResult> CancelOrder(int orderId)
+        {
+            var order = await _context.Orders.FindAsync(orderId);
+            if (order == null) return NotFound();
+
+            // Only allow cancellation if order is still active
+            if (order.Status == "Paid" || order.Status == "Prepared" || order.Status=="Assigned")
+            {
+                order.Status = "CancelledByCustomer";
+                await _context.SaveChangesAsync();
+                return Ok("Order cancelled by customer.");
+            }
+
+            return BadRequest("Order cannot be cancelled in its current state.");
+        }
+
+
+
+
+
     }
 }

@@ -65,46 +65,46 @@ namespace Code_Curry.Controllers
             return Ok(new { message = "Restaurant rating submitted successfully" });
         }
 
-        [HttpPost("SubmitDelivererRating")]
-        public async Task<IActionResult> SubmitDelivererRating(int userId, int delivererId, decimal rating)
-        {
-            if (!CanRateDeliverer(userId, delivererId))
-                return BadRequest(new { message = "You are not eligible to rate this deliverer." });
+        //[HttpPost("SubmitDelivererRating")]
+        //public async Task<IActionResult> SubmitDelivererRating(int userId, int delivererId, decimal rating)
+        //{
+        //    if (!CanRateDeliverer(userId, delivererId))
+        //        return BadRequest(new { message = "You are not eligible to rate this deliverer." });
 
-            var deliverer = await _context.Users.FindAsync(delivererId);
-            if (deliverer == null || deliverer.Role != "Deliverer")
-                return BadRequest(new { message = "Deliverer not found or invalid role." });
+        //    var deliverer = await _context.Users.FindAsync(delivererId);
+        //    if (deliverer == null || deliverer.Role != "Deliverer")
+        //        return BadRequest(new { message = "Deliverer not found or invalid role." });
 
-            var order = await _context.Orders
-                .Where(o => o.DelivererId == delivererId && o.UserId == userId && o.Status == "Delivered" && o.DelivererRating == null)
-                .OrderByDescending(o => o.OrderDate)
-                .FirstOrDefaultAsync();
+        //    var order = await _context.Orders
+        //        .Where(o => o.DelivererId == delivererId && o.UserId == userId && o.Status == "Delivered" && o.DelivererRating == null)
+        //        .OrderByDescending(o => o.OrderDate)
+        //        .FirstOrDefaultAsync();
 
-            if (order != null)
-            {
-                order.DelivererRating = rating;
-            }
+        //    if (order != null)
+        //    {
+        //        order.DelivererRating = rating;
+        //    }
 
-            // Get all orders for the deliverer where rating is not null
-            var ratedOrders = await _context.Orders
-                .Where(o => o.DelivererId == delivererId && o.Status == "Delivered" && o.DelivererRating != null)
-                .ToListAsync();
+        //    // Get all orders for the deliverer where rating is not null
+        //    var ratedOrders = await _context.Orders
+        //        .Where(o => o.DelivererId == delivererId && o.Status == "Delivered" && o.DelivererRating != null)
+        //        .ToListAsync();
 
-            // Calculate the average rating for the deliverer
-            decimal delivererAvg = ratedOrders.Any()
-                ? Math.Round(ratedOrders.Average(o => o.DelivererRating.Value), 1)
-                : 4.0m;  // Default to 4.0 if no previous ratings
+        //    // Calculate the average rating for the deliverer
+        //    decimal delivererAvg = ratedOrders.Any()
+        //        ? Math.Round(ratedOrders.Average(o => o.DelivererRating.Value), 1)
+        //        : 4.0m;  // Default to 4.0 if no previous ratings
 
-            // Update the deliverer's overall rating
-            deliverer.Rating = delivererAvg;
-            await _context.SaveChangesAsync();
+        //    // Update the deliverer's overall rating
+        //    deliverer.Rating = delivererAvg;
+        //    await _context.SaveChangesAsync();
 
-            return Ok(new
-            {
-                message = "Deliverer rating submitted successfully",
-                updatedRating = deliverer.Rating
-            });
-        }
+        //    return Ok(new
+        //    {
+        //        message = "Deliverer rating submitted successfully",
+        //        updatedRating = deliverer.Rating
+        //    });
+        //}
 
         [HttpPost("placeOrder")]
         public async Task<IActionResult> PlaceOrder([FromBody] PlaceOrderDto dto)
@@ -132,7 +132,7 @@ namespace Code_Curry.Controllers
                 {
                     UserId = dto.UserId,
                     RestId = group.Key,
-                    OrderDate = DateTimeOffset.Now,
+                    OrderDate = DateTime.Now,
                     Status = "Paid"
                 };
 

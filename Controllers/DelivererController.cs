@@ -60,9 +60,9 @@ namespace Code_Curry.Controllers
             var liveOrders = await _context.Orders
                 .Include(o => o.Rest)
                 .Include(o => o.User)
-                .Where(o => (o.Status == "Prepared" || o.Status == "Paid")
-                            && o.Rest.RestStatus != "Deleted"
-                            && o.User.UserStatus != "Deleted")
+                .Where(o => o.Status == "Paid"
+         || o.Status == "Prepared")
+
                 .Select(o => new
                 {
                     o.OrderId,
@@ -147,7 +147,13 @@ namespace Code_Curry.Controllers
             var orders = await _context.Orders
                 .Include(o => o.Rest)
                 .Include(o => o.User)
-                .Where(o => o.DelivererId == delivererId && o.Status == "Delivered")
+               .Where(o => o.DelivererId == delivererId &&
+           (o.Status == "Delivered"
+           || o.Status == "CancelledByCustomer"
+         || o.Status == "CancelledByDeliverer"
+         || o.Status=="CancelledByRest"
+         ))
+
                 .Select(o => new
                 {
                     o.OrderId,
@@ -220,5 +226,18 @@ namespace Code_Curry.Controllers
             var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
             return Convert.ToBase64String(bytes);
         }
+
+        [HttpPut("CancelOrder/{orderId}")]
+        public async Task<IActionResult> CancelOrderByDeliverer(int orderId)
+        {
+            var order = await _context.Orders.FindAsync(orderId);
+            if (order == null) return NotFound();
+
+            order.Status = "CancelledByDeliverer";
+            await _context.SaveChangesAsync();
+            return Ok("Order cancelled by deliverer.");
+        }
+
+
     }
 }

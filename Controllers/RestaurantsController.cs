@@ -1,4 +1,4 @@
-using Code_Curry.DTOs;
+﻿using Code_Curry.DTOs;
 using Code_Curry.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -37,7 +37,7 @@ namespace Code_Curry.Controllers
                 Address = dto.Address,
                 Email = dto.Email,
                 Phone = dto.Phone,
-                Cuisine=dto.Cuisine,
+                Cuisine = dto.Cuisine,
                 PasswordHash = hashedPassword,
                 GstNo = dto.GstNo,
                 FssaiNo = dto.FssaiNo,
@@ -75,7 +75,7 @@ namespace Code_Curry.Controllers
             restaurant.Address = dto.Address;
             restaurant.Phone = dto.Phone;
             restaurant.RestStatus = dto.RestStatus;
-          
+
 
             if (!string.IsNullOrWhiteSpace(dto.RestImageUrl))
                 restaurant.RestImageUrl = dto.RestImageUrl;
@@ -89,7 +89,7 @@ namespace Code_Curry.Controllers
             {
                 message = "Restaurant updated successfully",
                 restaurant.RestStatus
-               
+
             });
         }
 
@@ -165,12 +165,13 @@ namespace Code_Curry.Controllers
             return Ok(restaurants);
         }
 
-        // View restaurant open orders
         [HttpGet("ViewRestaurantOpenOrders/{RestId}")]
         public async Task<IActionResult> ViewRestaurantOpenOrders(int RestId)
         {
             var orders = await _context.Orders
-                .Where(o => o.RestId == RestId && o.Status == "Paid"&& o.User.UserStatus == "Active")
+               .Where(o => o.Status == "Paid"||
+               o.Status=="Assigned")
+
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Food)
                 .OrderByDescending(o => o.OrderDate)
@@ -192,12 +193,16 @@ namespace Code_Curry.Controllers
             return Ok(orders);
         }
 
-        // View restaurant past orders
         [HttpGet("ViewRestaurantPastOrders/{RestId}")]
         public async Task<IActionResult> ViewRestaurantPastOrders(int RestId)
         {
             var orders = await _context.Orders
-                .Where(o => o.RestId == RestId && o.Status == "Prepared"||o.Status=="Delivered")
+               .Where(o => o.Status == "Delivered"
+         || o.Status == "Prepared"
+         || o.Status == "CancelledByRest"
+         || o.Status == "CancelledByCustomer"
+         || o.Status=="CancelledByDeliverer")
+
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Food)
                 .OrderByDescending(o => o.OrderDate)
@@ -210,7 +215,7 @@ namespace Code_Curry.Controllers
                     o.Discount,
                     o.HandlingFee,
                     o.Gst,
-                    FinalPrice = o.TotalAmount - o.Discount + o.Gst+o.HandlingFee,
+                    FinalPrice = o.TotalAmount - o.Discount + o.Gst + o.HandlingFee,
                     Items = o.OrderDetails.Select(od => new
                     {
                         od.Food.Name,
@@ -222,6 +227,7 @@ namespace Code_Curry.Controllers
 
             return Ok(orders);
         }
+
         [HttpGet("Search")]
         public async Task<IActionResult> SearchRestaurants([FromQuery] string name)
         {
@@ -294,5 +300,18 @@ namespace Code_Curry.Controllers
             var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
             return Convert.ToBase64String(bytes);
         }
-    }
+
+        [HttpPut("CancelOrder/{orderId}")]
+        public async Task<IActionResult> CancelOrderByRestaurant(int orderId)
+        {
+            var order = await _context.Orders.FindAsync(orderId);
+            if (order == null) return NotFound();
+
+            order.Status = "CancelledByRest";
+            await _context.SaveChangesAsync();
+            return Ok("Order cancelled by restaurant.");
+        }
+
+
+}
 }

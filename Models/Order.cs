@@ -14,7 +14,7 @@ public partial class Order
 
     public int? DelivererId { get; set; }
 
-    public DateTimeOffset OrderDate { get; set; }
+    public DateTime OrderDate { get; set; }
 
     public string Status { get; set; } = null!;
 
@@ -36,7 +36,7 @@ public partial class Order
     public decimal? Rating { get; set; }
 
     [Column(TypeName = "decimal(18,2)")]
-    public decimal? DelivererRating { get; set; }
+    //public decimal? DelivererRating { get; set; }
 
     public virtual User? Deliverer { get; set; }
 
@@ -45,4 +45,5 @@ public partial class Order
     public virtual Restaurant Rest { get; set; } = null!;
 
     public virtual User User { get; set; } = null!;
+
 }
