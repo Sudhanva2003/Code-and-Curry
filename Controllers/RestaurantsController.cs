@@ -211,8 +211,8 @@ namespace Code_Curry.Controllers
                     o.TotalAmount,
                     o.Discount,
                     o.HandlingFee,
-                    o.GST,
-                    FinalPrice = o.TotalAmount - o.Discount + o.GST + o.HandlingFee,
+                    o.Gst,
+                    FinalPrice = o.TotalAmount - o.Discount + o.Gst + o.HandlingFee,
                     Items = o.OrderDetails.Select(od => new
                     {
                         od.Food.Name,

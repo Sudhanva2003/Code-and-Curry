@@ -27,7 +27,7 @@ public partial class Order
 
     public decimal DeliveryFee { get; set; }
 
-    public decimal Gst { get; set; }
+    public decimal Gst { get; set; }  // Corrected to Gst, per the Working Tree model
 
     public decimal FinalPrice { get; set; }
 

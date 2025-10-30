@@ -27,7 +27,7 @@ namespace Code_Curry.Controllers
                 Email = dto.Email,
                 Category = dto.Category,
                 Description = dto.Description,
-                CreatedDate = DateTimeOffset.Now,  // Using system time (current UTC time)
+                CreatedDate = DateTimeOffset.Now,
                 TicketStatus = "Open"
             };
             _context.SupportTickets.Add(ticket);
@@ -56,7 +56,7 @@ namespace Code_Curry.Controllers
                 Email = dto.Email,
                 Category = dto.Category,
                 Description = dto.Description,
-                CreatedDate = DateTimeOffset.Now,  // Using system time (current UTC time)
+                CreatedDate = DateTimeOffset.Now,
                 TicketStatus = "Open"
             };
             _context.SupportTickets.Add(ticket);
@@ -97,7 +97,7 @@ namespace Code_Curry.Controllers
                 TicketStatus = ticket.TicketStatus,
                 Role = ticket.UserId != null
                     ? _context.Users.FirstOrDefault(u => u.UserId == ticket.UserId)?.Role
-                    : "Deliverer"
+                    : "Restaurant"
             }).ToList();
 
             return Ok(result);
@@ -125,11 +125,9 @@ namespace Code_Curry.Controllers
             if (ticket == null) return NotFound();
 
             ticket.TicketStatus = "Resolved";
-            ticket.ResolvedDate = DateTimeOffset.Now;  // Using system time (current UTC time)
-            // Add admin message
-            var adminUser = await _context.Users.FindAsync(dto.UserId);
-            // Here you can store the admin message as well
-            ticket.Description += "\nResolved by: " + adminUser?.FullName + "\nMessage: " + dto.AdminMessage;
+            ticket.ResolvedDate = DateTimeOffset.Now;
+            ticket.AdminMessage = dto.AdminMessage;
+
             await _context.SaveChangesAsync();
 
             var response = new TicketDto
@@ -142,12 +140,13 @@ namespace Code_Curry.Controllers
                 Description = ticket.Description,
                 CreatedDate = ticket.CreatedDate,
                 TicketStatus = ticket.TicketStatus,
-                Role = adminUser?.Role
+                AdminMessage = ticket.AdminMessage,
+                ResolvedDate = ticket.ResolvedDate
             };
             return Ok(response);
         }
 
-        // 6) View Closed Tickets
+        // 6) View Closed Tickets - ✅ FIXED: Added AdminMessage
         [HttpGet("viewClosedTickets/{userId}")]
         public async Task<ActionResult<IEnumerable<TicketDto>>> ViewClosedTickets(int userId)
         {
@@ -165,9 +164,11 @@ namespace Code_Curry.Controllers
                 Description = ticket.Description,
                 CreatedDate = ticket.CreatedDate,
                 TicketStatus = ticket.TicketStatus,
+                ResolvedDate = ticket.ResolvedDate,
+                AdminMessage = ticket.AdminMessage, // ✅ ADDED THIS LINE!
                 Role = ticket.UserId != null
                     ? _context.Users.FirstOrDefault(u => u.UserId == ticket.UserId)?.Role
-                    : "Deliverer"
+                    : "Restaurant"
             }).ToList();
 
             return Ok(result);
@@ -192,7 +193,7 @@ namespace Code_Curry.Controllers
                                          Description = ticket.Description,
                                          CreatedDate = ticket.CreatedDate,
                                          TicketStatus = ticket.TicketStatus,
-                                         Role = "Deliverer"
+                                         Role = "Restaurant"
                                      }).ToList();
 
             var assignedTickets = tickets.Where(t => t.TicketStatus == "Assigned")
@@ -206,7 +207,7 @@ namespace Code_Curry.Controllers
                                              Description = ticket.Description,
                                              CreatedDate = ticket.CreatedDate,
                                              TicketStatus = ticket.TicketStatus,
-                                             Role = "Deliverer"
+                                             Role = "Restaurant"
                                          }).ToList();
 
             var resolvedTickets = tickets.Where(t => t.TicketStatus == "Resolved")
@@ -220,8 +221,8 @@ namespace Code_Curry.Controllers
                                              Description = ticket.Description,
                                              CreatedDate = ticket.CreatedDate,
                                              TicketStatus = ticket.TicketStatus,
-                                             Role = "Deliverer",
-                                             AdminMessage = ticket.Description,
+                                             Role = "Restaurant",
+                                             AdminMessage = ticket.AdminMessage,
                                              ResolvedDate = ticket.ResolvedDate
                                          }).ToList();
 
@@ -233,6 +234,140 @@ namespace Code_Curry.Controllers
             };
 
             return Ok(response);
+        }
+
+        // 8) Get ALL Open Tickets (Admin View)
+        [HttpGet("viewAllOpenTickets")]
+        public async Task<ActionResult<IEnumerable<TicketDto>>> ViewAllOpenTickets()
+        {
+            var tickets = await _context.SupportTickets
+                .Where(t => t.TicketStatus == "Open" || t.TicketStatus == "Assigned")
+                .OrderByDescending(t => t.CreatedDate)
+                .ToListAsync();
+
+            var result = tickets.Select(ticket => new TicketDto
+            {
+                TicketId = ticket.TicketId,
+                RestId = ticket.RestId,
+                UserId = ticket.UserId,
+                Email = ticket.Email,
+                Category = ticket.Category,
+                Description = ticket.Description,
+                CreatedDate = ticket.CreatedDate,
+                TicketStatus = ticket.TicketStatus,
+                AssignedAdminId = ticket.AssignedAdminId,
+                Role = ticket.UserId != null
+                    ? _context.Users.FirstOrDefault(u => u.UserId == ticket.UserId)?.Role
+                    : (ticket.RestId != null ? "Restaurant" : "Unknown")
+            }).ToList();
+
+            return Ok(result);
+        }
+
+        // 9) Get ALL Resolved Tickets (Admin View)
+        [HttpGet("viewAllResolvedTickets")]
+        public async Task<ActionResult<IEnumerable<TicketDto>>> ViewAllResolvedTickets()
+        {
+            var tickets = await _context.SupportTickets
+                .Where(t => t.TicketStatus == "Resolved")
+                .OrderByDescending(t => t.ResolvedDate)
+                .ToListAsync();
+
+            var result = tickets.Select(ticket => new TicketDto
+            {
+                TicketId = ticket.TicketId,
+                RestId = ticket.RestId,
+                UserId = ticket.UserId,
+                Email = ticket.Email,
+                Category = ticket.Category,
+                Description = ticket.Description,
+                CreatedDate = ticket.CreatedDate,
+                ResolvedDate = ticket.ResolvedDate,
+                TicketStatus = ticket.TicketStatus,
+                AdminMessage = ticket.AdminMessage,
+                Role = ticket.UserId != null
+                    ? _context.Users.FirstOrDefault(u => u.UserId == ticket.UserId)?.Role
+                    : (ticket.RestId != null ? "Restaurant" : "Unknown")
+            }).ToList();
+
+            return Ok(result);
+        }
+
+        // 10) Get User's All Tickets (for Past Tickets in Settings)
+        [HttpGet("viewMyTickets/{userId}")]
+        public async Task<ActionResult<IEnumerable<TicketDto>>> ViewMyTickets(int userId)
+        {
+            var tickets = await _context.SupportTickets
+                .Where(t => t.UserId == userId || t.RestId == userId)
+                .OrderByDescending(t => t.CreatedDate)
+                .ToListAsync();
+
+            var result = tickets.Select(ticket => new TicketDto
+            {
+                TicketId = ticket.TicketId,
+                RestId = ticket.RestId,
+                UserId = ticket.UserId,
+                Email = ticket.Email,
+                Category = ticket.Category,
+                Description = ticket.Description,
+                CreatedDate = ticket.CreatedDate,
+                ResolvedDate = ticket.ResolvedDate,
+                TicketStatus = ticket.TicketStatus,
+                AdminMessage = ticket.AdminMessage,
+                Role = ticket.UserId != null
+                    ? _context.Users.FirstOrDefault(u => u.UserId == ticket.UserId)?.Role
+                    : "Restaurant"
+            }).ToList();
+
+            return Ok(result);
+        }
+
+        // 11) Assign Ticket to Admin (for My Tickets)
+        [HttpPost("assignToMe")]
+        public async Task<IActionResult> AssignToMe([FromQuery] int ticketId, [FromQuery] int adminId)
+        {
+            var ticket = await _context.SupportTickets.FindAsync(ticketId);
+            if (ticket == null)
+                return NotFound(new { message = "Ticket not found" });
+
+            ticket.AssignedAdminId = adminId;
+            ticket.TicketStatus = "Assigned";
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Ticket assigned successfully",
+                ticketId = ticket.TicketId,
+                assignedAdminId = ticket.AssignedAdminId,
+                ticketStatus = ticket.TicketStatus
+            });
+        }
+
+        // 12) Get Admin's Assigned Tickets (My Tickets)
+        [HttpGet("viewMyAssignedTickets/{adminId}")]
+        public async Task<ActionResult<IEnumerable<TicketDto>>> ViewMyAssignedTickets(int adminId)
+        {
+            var tickets = await _context.SupportTickets
+                .Where(t => t.AssignedAdminId == adminId && (t.TicketStatus == "Assigned" || t.TicketStatus == "Open"))
+                .OrderByDescending(t => t.CreatedDate)
+                .ToListAsync();
+
+            var result = tickets.Select(ticket => new TicketDto
+            {
+                TicketId = ticket.TicketId,
+                RestId = ticket.RestId,
+                UserId = ticket.UserId,
+                Email = ticket.Email,
+                Category = ticket.Category,
+                Description = ticket.Description,
+                CreatedDate = ticket.CreatedDate,
+                TicketStatus = ticket.TicketStatus,
+                Role = ticket.UserId != null
+                    ? _context.Users.FirstOrDefault(u => u.UserId == ticket.UserId)?.Role
+                    : (ticket.RestId != null ? "Restaurant" : "Unknown")
+            }).ToList();
+
+            return Ok(result);
         }
     }
 }
