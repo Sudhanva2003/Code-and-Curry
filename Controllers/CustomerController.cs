@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore; // required for AnyAsync
 using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages.Manage;
+using Newtonsoft.Json.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -141,6 +142,11 @@ namespace Code_Curry.Controllers
                     orderDate = o.OrderDate,
                     totalAmount = o.TotalAmount,
                     status = o.Status,
+                    platformFee=o.PlatformFee,
+                    handlingFee=o.HandlingFee,
+                    deliveryFee=o.DeliveryFee,
+                    gst=o.Gst,
+                    finalPrice=o.FinalPrice,
                     items = o.OrderDetails.Select(d => new
                     {
                         foodId = d.FoodId,
@@ -162,6 +168,11 @@ namespace Code_Curry.Controllers
                     orderDate = o.OrderDate,
                     totalAmount = o.TotalAmount,
                     status = o.Status,
+                    platformFee = o.PlatformFee,
+                    handlingFee = o.HandlingFee,
+                    deliveryFee = o.DeliveryFee,
+                    gst = o.Gst,
+                    finalPrice = o.FinalPrice,
                     items = o.OrderDetails.Select(d => new
                     {
                         foodId = d.FoodId,

@@ -35,7 +35,7 @@ namespace Code_Curry.Controllers
             bill.Subtotal = subtotal;
 
             // Example calculations for new fields
-            bill.Discount = subtotal * 0.05m;         // 5% discount for example
+            bill.Discount = 0;         // 0 by default
             bill.PlatformFee = subtotal * 0.02m;      // 2% platform fee
             bill.HandlingCharges = totalFoodItems * 5; // per item
             bill.DeliveryFees = 50;                    // flat delivery fee

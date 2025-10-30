@@ -99,6 +99,7 @@ namespace Code_Curry.Controllers
                 Rating = restaurant.Rating,
                 Phone = restaurant.Phone,
                 Email = restaurant.Email,
+                Cuisine=restaurant.Cuisine,
                 RestStatus = restaurant.RestStatus,
                 RestImageUrl = restaurant.RestImageUrl,
                 GstNo = restaurant.GstNo,
@@ -170,6 +171,8 @@ namespace Code_Curry.Controllers
                     o.OrderDate,
                     o.Status,
                     o.TotalAmount,
+                    
+
                     Items = o.OrderDetails.Select(od => new
                     {
                         od.Food.Name,
@@ -199,11 +202,12 @@ namespace Code_Curry.Controllers
                     o.TotalAmount,
                     o.Discount,
                     o.HandlingFee,
-                    o.Gst,
-                    FinalPrice = o.TotalAmount - o.Discount + o.Gst + o.HandlingFee,
+                    
+                    FinalPrice = o.TotalAmount - o.Discount  + o.HandlingFee,
                     Items = o.OrderDetails.Select(od => new
                     {
                         od.Food.Name,
+                        od.Price,
                         od.Quantity,
                         od.Food.FoodImageUrl
                     }).ToList()
@@ -248,20 +252,22 @@ namespace Code_Curry.Controllers
 
         [Authorize(Roles = "Admin,Restaurant")]
         [HttpPatch("SetRestaurantStatus/{RestId}")]
-        public async Task<IActionResult> SetRestaurantStatus(int RestId, [FromQuery] string action)
+        public async Task<IActionResult> SetRestaurantStatus(int RestId, [FromBody] UpdateRestaurantStatusDto statusDto)
         {
             var restaurant = await _context.Restaurants.FindAsync(RestId);
             if (restaurant == null) return NotFound("Restaurant not found.");
 
-            action = action?.ToLower();
-            if (action != "open" && action != "close")
-                return BadRequest("Invalid action. Use 'open' or 'close'.");
+            // Validate the status before updating
+            if (statusDto.RestStatus != "Open" && statusDto.RestStatus != "Closed")
+                return BadRequest("Invalid status. Use 'Open' or 'Closed'.");
 
-            restaurant.RestStatus = action == "open" ? "Open" : "Closed";
+            restaurant.RestStatus = statusDto.RestStatus;
             await _context.SaveChangesAsync();
 
             return Ok(new { message = $"Restaurant is now {restaurant.RestStatus}.", restaurant.RestStatus });
         }
+
+
 
         [Authorize(Roles = "Admin,Restaurant")]
         [HttpDelete("DeleteRestaurant/{RestId}")]
