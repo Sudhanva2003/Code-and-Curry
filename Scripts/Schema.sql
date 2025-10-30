@@ -73,6 +73,8 @@ CREATE TABLE Orders (
     DeliveryFee MONEY NOT NULL,        -- Delivery charges
     GST MONEY NOT NULL,                -- Tax amount
     FinalPrice MONEY NOT NULL,
+    Rating decimal(2,1) null,
+    DelivererRating decimal(2,1) null,
     FOREIGN KEY (UserId) REFERENCES Users(UserId),
     FOREIGN KEY (RestId) REFERENCES Restaurant(RestId),
     FOREIGN KEY (DelivererId) REFERENCES Users(UserId)
