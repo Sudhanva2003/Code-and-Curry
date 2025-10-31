@@ -72,7 +72,7 @@ namespace Code_Curry.Controllers
             restaurant.Name = dto.Name;
             restaurant.Address = dto.Address;
             restaurant.Phone = dto.Phone;
-            restaurant.RestStatus = dto.RestStatus;
+            
 
             if (!string.IsNullOrWhiteSpace(dto.RestImageUrl))
                 restaurant.RestImageUrl = dto.RestImageUrl;
@@ -82,7 +82,7 @@ namespace Code_Curry.Controllers
 
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Restaurant updated successfully", restaurant.RestStatus });
+            return Ok(new { message = "Restaurant updated successfully" });
         }
 
         [Authorize(Roles = "Admin,Restaurant")]
@@ -190,11 +190,12 @@ namespace Code_Curry.Controllers
         public async Task<IActionResult> ViewRestaurantPastOrders(int RestId)
         {
             var orders = await _context.Orders
-                .Where(o => o.Status == "Delivered"
-         || o.Status == "Prepared"
-         || o.Status == "CancelledByRest"
-         || o.Status == "CancelledByCustomer"
-         || o.Status == "CancelledByDeliverer")
+                .Where(o => o.RestId == RestId && (
+                    o.Status == "Delivered"
+                    || o.Status == "Prepared"
+                    || o.Status == "CancelledByRest"
+                    || o.Status == "CancelledByCustomer"
+                    || o.Status == "CancelledByDeliverer"))
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Food)
                 .OrderByDescending(o => o.OrderDate)
@@ -206,8 +207,8 @@ namespace Code_Curry.Controllers
                     o.TotalAmount,
                     o.Discount,
                     o.HandlingFee,
-                    
-                    FinalPrice = o.TotalAmount - o.Discount  + o.HandlingFee,
+                    o.RestId,
+                    FinalPrice = o.TotalAmount - o.Discount + o.HandlingFee,
                     Items = o.OrderDetails.Select(od => new
                     {
                         od.Food.Name,
@@ -220,6 +221,7 @@ namespace Code_Curry.Controllers
 
             return Ok(orders);
         }
+
 
         [HttpPut("CancelOrder/{orderId}")]
         public async Task<IActionResult> CancelOrderByRestaurant(int orderId)
@@ -240,7 +242,7 @@ namespace Code_Curry.Controllers
                 return BadRequest("Search term is required.");
 
             var matchingRestaurants = await _context.Restaurants
-                .Where(r => r.Name.Contains(name))
+                .Where(r => r.Name.Contains(name) && r.RestStatus != "Deleted")  // Exclude restaurants marked as "Deleted"
                 .Select(r => new RestaurantSummaryDto
                 {
                     RestId = r.RestId,
@@ -252,6 +254,7 @@ namespace Code_Curry.Controllers
 
             return Ok(matchingRestaurants);
         }
+
 
         [Authorize(Roles = "Admin,Restaurant")]
         [HttpPut("Prepared/{orderId}")]

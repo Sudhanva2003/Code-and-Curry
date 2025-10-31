@@ -188,7 +188,7 @@ namespace Code_Curry.Controllers
 
             var matchingRestaurants = await _context.Foods
                 .Include(f => f.Rest)
-                .Where(f => f.FoodStatus != "Deleted" && EF.Functions.Like(f.Name, $"%{name}%"))
+                .Where(f => f.FoodStatus != "Deleted" && f.Rest.RestStatus != "Deleted" && EF.Functions.Like(f.Name, $"%{name}%"))
                 .Select(f => new
                 {
                     f.Rest.RestId,
@@ -204,6 +204,7 @@ namespace Code_Curry.Controllers
 
             return Ok(matchingRestaurants);
         }
+
 
 
     }

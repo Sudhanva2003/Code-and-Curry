@@ -16,9 +16,6 @@ namespace Code_Curry.DTOs
         [MaxLength(100)]
         public string? Cuisine { get; set; }
 
-        [MaxLength(100)]
-
-        public string? RestStatus { get; set; }
 
         public string? RestImageUrl { get; set; }
     }

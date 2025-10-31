@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Code_Curry.Controllers
 {
-
     [Route("api/[controller]")]
     [ApiController]
     public class FilterController : ControllerBase
@@ -30,7 +29,8 @@ namespace Code_Curry.Controllers
                 .Where(r =>
                     EF.Functions.Like(r.Name.ToLower(), $"%{query}%") ||
                     EF.Functions.Like(r.Address.ToLower(), $"%{query}%") ||
-                    (!string.IsNullOrEmpty(r.Cuisine) && EF.Functions.Like(r.Cuisine.ToLower(), $"%{query}%"))
+                    (!string.IsNullOrEmpty(r.Cuisine) && EF.Functions.Like(r.Cuisine.ToLower(), $"%{query}%")) &&
+                    r.RestStatus != "Deleted"  // Exclude restaurants marked as "Deleted"
                 )
                 .Select(r => new DTOs.SearchDto
                 {
@@ -68,6 +68,7 @@ namespace Code_Curry.Controllers
 
             return Ok(result);
         }
+
         [Authorize(Roles = "Admin,Customer")]
         [HttpGet("Foods")]
         public async Task<IActionResult> GetFoods([FromQuery] int restId, [FromQuery] string category = "none", [FromQuery] string sort = "none")
@@ -80,8 +81,24 @@ namespace Code_Curry.Controllers
             // Filter by category
             if (!string.IsNullOrEmpty(category) && category.ToLower() != "none")
             {
-                query = query.Where(f => f.Category.ToLower() == category.ToLower());
+                var lowerCategory = category.ToLower();
+
+                if (lowerCategory == "veg")
+                {
+                    // Include both 'veg' and 'vegan' but exclude 'non-veg'
+                    query = query.Where(f =>
+                        f.Category.ToLower() == "veg" ||
+                        f.Category.ToLower() == "vegan");
+                }
+                else
+                {
+                    // Exact match for other categories
+                    query = query.Where(f => f.Category.ToLower() == lowerCategory);
+                }
             }
+
+            // Filter out foods with FoodStatus = "Deleted"
+            query = query.Where(f => f.FoodStatus != "Deleted");
 
             // Sort
             if (!string.IsNullOrEmpty(sort))
@@ -91,7 +108,6 @@ namespace Code_Curry.Controllers
                     case "price":
                         query = query.OrderBy(f => f.Price);
                         break;
-                    // You can add more sorting options here later
                     default:
                         query = query.OrderBy(f => f.FoodId); // default sort
                         break;
@@ -101,6 +117,11 @@ namespace Code_Curry.Controllers
             var foods = await query.ToListAsync();
             return Ok(foods);
         }
+
+
+
+
+
 
         // GET: api/Filter/Restaurants?sort=rating
         [Authorize(Roles = "Admin,Customer")]
@@ -123,9 +144,12 @@ namespace Code_Curry.Controllers
                 }
             }
 
-            var restaurants = await query.ToListAsync();
+            var restaurants = await query
+                .Where(r => r.RestStatus != "Deleted") // Exclude deleted restaurants
+                .ToListAsync();
             return Ok(restaurants);
         }
+
         [Authorize(Roles = "Admin,Customer")]
         [HttpGet("SearchByCuisine")]
         public async Task<IActionResult> SearchByCuisine([FromQuery] string cuisine)
@@ -136,7 +160,7 @@ namespace Code_Curry.Controllers
             cuisine = cuisine.Trim().ToLower();
 
             var matchedRestaurants = await _context.Restaurants
-                .Where(r => !string.IsNullOrEmpty(r.Cuisine) && r.Cuisine.ToLower().Contains(cuisine))
+                .Where(r => !string.IsNullOrEmpty(r.Cuisine) && r.Cuisine.ToLower().Contains(cuisine) && r.RestStatus != "Deleted")
                 .Select(r => new DTOs.SearchDto
                 {
                     RestId = r.RestId,
@@ -151,6 +175,5 @@ namespace Code_Curry.Controllers
 
             return Ok(matchedRestaurants);
         }
-
     }
 }

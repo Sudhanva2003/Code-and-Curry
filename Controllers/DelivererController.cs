@@ -236,7 +236,7 @@ namespace Code_Curry.Controllers
             var order = await _context.Orders.FindAsync(orderId);
             if (order == null) return NotFound();
 
-            order.Status = "CancelledByDeliverer";
+            order.Status = "Prepared";
             await _context.SaveChangesAsync();
             return Ok("Order cancelled by deliverer.");
         }
