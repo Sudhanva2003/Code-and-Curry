@@ -55,6 +55,7 @@ namespace Code_Curry.Controllers
 
             return Ok(new { message = "Deliverer registered successfully", delivererId = deliverer.UserId });
         }
+
         [Authorize(Roles = "Admin,Deliverer")]
         [HttpGet("ViewLiveOrders")]
         public async Task<IActionResult> ViewLiveOrders()
@@ -65,6 +66,7 @@ namespace Code_Curry.Controllers
                 .Where(o => (o.Status == "Prepared" || o.Status == "Paid")
                             && o.Rest.RestStatus != "Deleted"
                             && o.User.UserStatus != "Deleted")
+                .OrderByDescending(o => o.OrderDate)  // Sorting by OrderDate in descending order
                 .Select(o => new
                 {
                     o.OrderId,
@@ -152,10 +154,16 @@ namespace Code_Curry.Controllers
             var orders = await _context.Orders
                 .Include(o => o.Rest)
                 .Include(o => o.User)
-                .Where(o => o.DelivererId == delivererId && o.Status == "Delivered")
+                .Where(o => o.DelivererId == delivererId &&
+           (o.Status == "Delivered"
+           || o.Status == "CancelledByCustomer"
+           || o.Status == "CancelledByDeliverer"
+           || o.Status == "CancelledByRest"))
+                .OrderByDescending(o => o.OrderDate)  // Sorting by OrderDate in descending order
                 .Select(o => new
                 {
                     o.OrderId,
+                    o.Status,
                     RestaurantAddress = o.Rest.Address,
                     CustomerAddress = o.User.Address,
                     o.DeliveryFee,
@@ -220,6 +228,17 @@ namespace Code_Curry.Controllers
             await _context.SaveChangesAsync();
 
             return Ok("Deliverer soft-deleted successfully.");
+        }
+
+        [HttpPut("CancelOrder/{orderId}")]
+        public async Task<IActionResult> CancelOrderByDeliverer(int orderId)
+        {
+            var order = await _context.Orders.FindAsync(orderId);
+            if (order == null) return NotFound();
+
+            order.Status = "CancelledByDeliverer";
+            await _context.SaveChangesAsync();
+            return Ok("Order cancelled by deliverer.");
         }
 
         private string HashPassword(string password)

@@ -190,7 +190,11 @@ namespace Code_Curry.Controllers
         public async Task<IActionResult> ViewRestaurantPastOrders(int RestId)
         {
             var orders = await _context.Orders
-                .Where(o => o.RestId == RestId && (o.Status == "Prepared" || o.Status == "Delivered"))
+                .Where(o => o.Status == "Delivered"
+         || o.Status == "Prepared"
+         || o.Status == "CancelledByRest"
+         || o.Status == "CancelledByCustomer"
+         || o.Status == "CancelledByDeliverer")
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Food)
                 .OrderByDescending(o => o.OrderDate)
@@ -215,6 +219,17 @@ namespace Code_Curry.Controllers
                 .ToListAsync();
 
             return Ok(orders);
+        }
+
+        [HttpPut("CancelOrder/{orderId}")]
+        public async Task<IActionResult> CancelOrderByRestaurant(int orderId)
+        {
+            var order = await _context.Orders.FindAsync(orderId);
+            if (order == null) return NotFound();
+
+            order.Status = "CancelledByRest";
+            await _context.SaveChangesAsync();
+            return Ok("Order cancelled by restaurant.");
         }
 
         [Authorize(Roles = "Admin,Customer")]

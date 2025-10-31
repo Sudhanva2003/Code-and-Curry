@@ -158,7 +158,11 @@ namespace Code_Curry.Controllers
 
             // Past Orders (status = Prepared)
             var pastOrders = orders
-                .Where(o => o.Status == "Prepared"|| o.Status=="Delivered")
+                .Where(o => o.Status == "Delivered"
+         || o.Status == "Prepared"
+         || o.Status == "CancelledByCustomer"
+         || o.Status == "CancelledByRest"
+         || o.Status == "CancelledByDeliverer")
                 .OrderByDescending(o => o.OrderDate)
                 .Select(o => new
                 {
@@ -298,6 +302,23 @@ namespace Code_Curry.Controllers
                 user.Email,
                 user.Role
             });
+        }
+
+        [HttpPut("CancelOrder/{orderId}")]
+        public async Task<IActionResult> CancelOrder(int orderId)
+        {
+            var order = await _context.Orders.FindAsync(orderId);
+            if (order == null) return NotFound();
+
+            // Only allow cancellation if order is still active
+            if (order.Status == "Paid" || order.Status == "Prepared" || order.Status == "Assigned")
+            {
+                order.Status = "CancelledByCustomer";
+                await _context.SaveChangesAsync();
+                return Ok("Order cancelled by customer.");
+            }
+
+            return BadRequest("Order cannot be cancelled in its current state.");
         }
 
 
