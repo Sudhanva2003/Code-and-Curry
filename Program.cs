@@ -1,6 +1,6 @@
-
 using Code_Curry.Models;
 using Microsoft.EntityFrameworkCore;
+using Code_Curry.Services;  // Add this to access DistanceService
 
 namespace Code_Curry
 {
@@ -27,6 +27,8 @@ namespace Code_Curry
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            // Register DistanceService for Google Maps API interaction
+            builder.Services.AddSingleton<DistanceService>();  // Add this line
 
             var app = builder.Build();
 

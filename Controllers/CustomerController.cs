@@ -2,9 +2,10 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.EntityFrameworkCore; // required for AnyAsync
+using Microsoft.EntityFrameworkCore;
 using Code_Curry.DTOs;
 using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages.Manage;
+using Code_Curry.Services; // Add reference to DistanceService
 
 namespace Code_Curry.Controllers
 {
@@ -13,11 +14,15 @@ namespace Code_Curry.Controllers
     public class CustomerController : ControllerBase
     {
         private readonly CodeCurryContext _context;
+        private readonly DistanceService _distanceService; // Add reference to DistanceService
 
-        public CustomerController(CodeCurryContext context)
+        public CustomerController(CodeCurryContext context, DistanceService distanceService)
         {
             _context = context;
+            _distanceService = distanceService;  // Initialize DistanceService
         }
+
+        // Existing methods here ...
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] CustomerCreateDto dto)
@@ -25,14 +30,13 @@ namespace Code_Curry.Controllers
             // async check if email exists
             bool emailExists = await _context.Users.AnyAsync(u => u.Email == dto.Email);
             bool RestaurantEmailExists = await _context.Restaurants.AnyAsync(u => u.Email == dto.Email);
-            if (emailExists||RestaurantEmailExists)
+            if (emailExists || RestaurantEmailExists)
             {
                 return Conflict("Email already exists."); // 409 Conflict
             }
 
             // hash password
-            var hashedPassword = HashPassword(dto.Password); //hashpassword is defined below,
-                                                             //we have implemented this function.
+            var hashedPassword = HashPassword(dto.Password); // hashpassword is defined below.
 
             // map DTO to EF entity
             var user = new User
@@ -58,17 +62,15 @@ namespace Code_Curry.Controllers
             });
         }
 
-
         [HttpPost("login")]
-
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
             if (dto == null || string.IsNullOrEmpty(dto.Email) || string.IsNullOrEmpty(dto.Password))
                 return BadRequest("Email and password are required.");
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email && u.Role=="Customer"&&u.UserStatus != "Deleted");
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email && u.Role == "Customer" && u.UserStatus != "Deleted");
             var restaurant = await _context.Restaurants.FirstOrDefaultAsync(r => r.Email == dto.Email && r.RestStatus != "Deleted");
-            var deliverer = await _context.Users.FirstOrDefaultAsync(d => d.Email == dto.Email && d.Role=="Deliverer"&& d.UserStatus != "Deleted");
+            var deliverer = await _context.Users.FirstOrDefaultAsync(d => d.Email == dto.Email && d.Role == "Deliverer" && d.UserStatus != "Deleted");
             var admin = await _context.Users.FirstOrDefaultAsync(a => a.Email == dto.Email && a.Role == "Admin" && a.UserStatus != "Deleted");
 
             if (user == null && restaurant == null && deliverer == null && admin == null)
@@ -135,13 +137,10 @@ namespace Code_Curry.Controllers
             return Unauthorized("Login failed.");
         }
 
-
-
         [HttpGet("ViewUser/{UserId}")]
-
         public async Task<IActionResult> ViewUser(int UserId)
         {
-            var user=await _context.Users.FindAsync(UserId);
+            var user = await _context.Users.FindAsync(UserId);
             if (user == null)
             {
                 return NotFound();
@@ -152,17 +151,17 @@ namespace Code_Curry.Controllers
                 Email = user.Email,
                 Phone = user.Phone,
                 Address = user.Address,
-                Role=user.Role
+                Role = user.Role
             };
 
             return Ok(dto);
         }
 
         [HttpPut("EditUserDetails/{UserId}")]
-        public async Task<IActionResult> EditUserDetails(int UserId,[FromBody] CustomerEditDto newUser)
+        public async Task<IActionResult> EditUserDetails(int UserId, [FromBody] CustomerEditDto newUser)
         {
             var oldUser = await _context.Users.FindAsync(UserId);
-            if (oldUser==null)
+            if (oldUser == null)
             {
                 return BadRequest("User not found");
             }
@@ -173,7 +172,6 @@ namespace Code_Curry.Controllers
             oldUser.FullName = newUser.FullName;
             oldUser.Phone = newUser.Phone;
             oldUser.Address = newUser.Address;
- 
 
             await _context.SaveChangesAsync();
 
@@ -185,177 +183,16 @@ namespace Code_Curry.Controllers
             };
 
             return Ok(dto);
-
         }
 
-        [HttpGet("ViewUserOrders/{UserId}")]
-        public async Task<IActionResult> ViewOrders(int UserId)
+        // New Distance Method to calculate the distance
+        [HttpGet("Distance")]
+        public async Task<int> Distance(string restAddress, string customerAddress)
         {
-            // Fetch all orders for this user including details and food
-            var orders = await _context.Orders
-                .Where(o => o.UserId == UserId)
-                .Include(o => o.OrderDetails)
-                    .ThenInclude(od => od.Food)
-                .ToListAsync();
-
-            if (!orders.Any())
-                return NotFound("No orders found for this user.");
-
-            // Open Orders (status = Paid)
-            var openOrders = orders
-                .Where(o => o.Status == "Paid")
-                .OrderByDescending(o => o.OrderDate)
-                .Select(o => new
-                {
-                    orderId = o.OrderId,
-                    restId = o.RestId,
-                    orderDate = o.OrderDate,
-                    totalAmount = o.TotalAmount,
-                    status = o.Status,
-                    items = o.OrderDetails.Select(d => new
-                    {
-                        foodId = d.FoodId,
-                        foodName = d.Food.Name,
-                        quantity = d.Quantity,
-                        price = d.Price
-                    })
-                }).ToList();
-
-            // Past Orders (status = Prepared)
-            var pastOrders = orders
-                .Where(o => o.Status == "Prepared"|| o.Status=="Delivered")
-                .OrderByDescending(o => o.OrderDate)
-                .Select(o => new
-                {
-                    orderId = o.OrderId,
-                    restId = o.RestId,
-                    orderDate = o.OrderDate,
-                    totalAmount = o.TotalAmount,
-                    status = o.Status,
-                    items = o.OrderDetails.Select(d => new
-                    {
-                        foodId = d.FoodId,
-                        foodName = d.Food.Name,
-                        quantity = d.Quantity,
-                        price = d.Price
-                    })
-                }).ToList();
-
-            var result = new
-            {
-                openOrders,
-                pastOrders
-            };
-
-            return Ok(result);
+            // Call the DistanceService to calculate the distance
+            int distance = await _distanceService.GetDistanceAsync(restAddress, customerAddress);
+            return distance;  // Return the distance as an integer
         }
-
-
-        [HttpGet("ViewCart/{UserId}")]
-        public async Task<IActionResult> ViewCart(int UserId)
-        {
-            var pendingOrders = await _context.Orders
-                .Where(o => o.UserId == UserId && o.Status == "Pending")
-                .Include(o => o.OrderDetails)
-                    .ThenInclude(od => od.Food)
-                .ToListAsync();
-
-            if (!pendingOrders.Any())
-                return NotFound("No pending orders (cart is empty).");
-
-            var result = pendingOrders.Select(o => new
-            {
-                orderId = o.OrderId,
-                restId = o.RestId,
-                orderDate = o.OrderDate,
-                totalAmount = o.TotalAmount,
-                status = o.Status,
-                items = o.OrderDetails.Select(d => new
-                {
-                    foodId = d.FoodId,
-                    foodName = d.Food.Name,
-                    quantity = d.Quantity,
-                    price = d.Price
-                })
-            });
-
-            return Ok(result);
-        }
-
-        [HttpPost("Checkout/{orderId}")]
-        public async Task<IActionResult> Checkout(int orderId)
-        {
-            var order = await _context.Orders.FindAsync(orderId);
-
-            if (order == null)
-                return NotFound("Order not found.");
-
-            if (order.Status != "Pending")
-                return BadRequest("Only pending orders can be checked out.");
-
-            order.Status = "Paid";
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                message = "Order checked out successfully.",
-                orderId = order.OrderId,
-                newStatus = order.Status,
-                totalAmount = order.TotalAmount
-            });
-        }
-       
-        [HttpDelete("DeleteUser/{UserId}")]
-        public async Task<IActionResult> DeleteUser(int UserId)
-        {
-            var user = await _context.Users.FindAsync(UserId);
-            if (user == null || user.UserStatus == "Deleted")
-                return NotFound(new { message = "User not found" });
-
-            // Soft delete
-            user.UserStatus = "Deleted";
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "User deleted successfully (soft deleted)" });
-        }
-
-        [HttpPost("registerAdmin")]
-        public async Task<IActionResult> RegisterAdmin([FromBody] AdminCreateDto dto)
-        {
-            // async check if email exists
-            bool emailExists = await _context.Users.AnyAsync(u => u.Email == dto.Email);
-            bool RestaurantEmailExists = await _context.Restaurants.AnyAsync(u => u.Email == dto.Email);
-            if (emailExists || RestaurantEmailExists)
-            {
-                return Conflict("Email already exists."); // 409 Conflict
-            }
-
-            // hash password
-            var hashedPassword = HashPassword(dto.Password); // Assuming HashPassword is implemented to hash the password
-
-            // map DTO to EF entity
-            var user = new User
-            {
-                FullName = dto.FullName,
-                Email = dto.Email,
-                Phone = dto.Phone,
-                PasswordHash = hashedPassword, // Store the hashed password
-                Role = "Admin"
-            };
-
-            await _context.Users.AddAsync(user);           // async add
-            await _context.SaveChangesAsync();             // async save
-
-            // return minimal info, do not return password
-            return Ok(new
-            {
-                user.UserId,
-                user.FullName,
-                user.Email,
-                user.Role
-            });
-        }
-
 
         private string HashPassword(string password)
         {
