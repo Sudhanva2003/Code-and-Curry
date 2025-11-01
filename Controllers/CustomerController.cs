@@ -1,5 +1,6 @@
 ﻿using Code_Curry.DTOs;
 using Code_Curry.Models;
+using Code_Curry.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore; // required for AnyAsync
@@ -15,10 +16,12 @@ namespace Code_Curry.Controllers
     public class CustomerController : ControllerBase
     {
         private readonly CodeCurryContext _context;
+        private readonly DistanceService _distanceService;
 
-        public CustomerController(CodeCurryContext context)
+        public CustomerController(CodeCurryContext context, DistanceService distanceService)
         {
             _context = context;
+            _distanceService = distanceService;
         }
 
         [AllowAnonymous]
@@ -303,6 +306,15 @@ namespace Code_Curry.Controllers
                 user.Role
             });
         }
+
+        [HttpGet("Distance")]
+        public async Task<int> Distance(string restAddress, string customerAddress)
+        {
+            // Call the DistanceService to calculate the distance
+            int distance = await _distanceService.GetDistanceAsync(restAddress, customerAddress);
+            return distance;  // Return the distance as an integer
+        }
+
 
         [HttpPut("CancelOrder/{orderId}")]
         public async Task<IActionResult> CancelOrder(int orderId)

@@ -92,6 +92,8 @@ namespace Code_Curry
                 options.AddPolicy("CustomerPolicy", policy => policy.RequireRole("Customer"));
             });
 
+            builder.Services.AddSingleton<DistanceService>();
+
             var app = builder.Build();
 
             if (app.Environment.IsDevelopment())
