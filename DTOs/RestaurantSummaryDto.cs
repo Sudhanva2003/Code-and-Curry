@@ -11,6 +11,8 @@ namespace Code_Curry.DTOs
 
         public decimal? Rating { get; set; }
 
+        public string address { get; set; } = null!;
+
         [MaxLength(20)]
         public string RestStatus { get; set; } = "Open";
 

@@ -248,7 +248,9 @@ namespace Code_Curry.Controllers
                     RestId = r.RestId,
                     Name = r.Name,
                     Rating = r.Rating,
-                    RestImageUrl = r.RestImageUrl
+                    RestImageUrl = r.RestImageUrl,
+                    address=r.Address,
+                    
                 })
                 .ToListAsync();
 
